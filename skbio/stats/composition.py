@@ -332,7 +332,7 @@ def power(x, a):
     return closure(x**a).squeeze()
 
 
-def inner(mat1, mat2):
+def inner(x, y):
     """
     Calculates the Aitchson inner product [1]_.
 
@@ -357,16 +357,16 @@ def inner(mat1, mat2):
     .. [1] V. Pawlowsky-Glahn. "Lecture Notes on Compositional Data Analysis"
 
     """
-    mat1 = closure(mat1)
-    mat2 = closure(mat2)
-    D1 = mat1.shape[-1]
-    D2 = mat2.shape[-1]
+    x = closure(x)
+    y = closure(y)
+    D1 = x.shape[-1]
+    D2 = y.shape[-1]
     if D1 != D2:
         raise ValueError("Compositions must have the same dimensions")
     D = D1
     M = np.ones((D, D))*-1 + np.identity(D)*D
-    a = clr(mat1)
-    b = clr(mat2).T
+    a = clr(x)
+    b = clr(y).T
     return np.dot(np.dot(a, M), b) / D
 
 
