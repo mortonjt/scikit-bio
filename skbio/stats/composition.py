@@ -333,8 +333,13 @@ def power(x, a):
 
 
 def inner(x, y):
-    """
+    r"""
     Calculates the Aitchson inner product [1]_.
+
+    This inner product is defined as follows
+    :math:`\langle x, y \rangle_a =
+    \frac{1}{2D} \sum\limits_{i=1}^{D} \sum\limits_{j=1}^{D}
+    ln(\frac{x_i}{x_j}) ln(\frac{y_i}{y_j})`
 
     Parameters
     ----------
@@ -427,7 +432,7 @@ def clr(mat):
 
 
 def clr_inv(mat):
-    """
+    r"""
     Performs inverse centre log ratio transformation [1]_.
 
     This function transforms compositions from the real space to
@@ -471,21 +476,21 @@ def clr_inv(mat):
 
 
 def ilr(mat, basis=None, check=True):
-    """
+    r"""
     Performs isometric log ratio transformation [1]_.
 
-    This function transforms compositions from the real space to
-    Aitchison geometry. The :math: ilr` transform is both an isometry,
+    This function transforms compositions from Aitchison simplex to
+    the real space. The :math: ilr` transform is both an isometry,
     and an isomorphism defined on the following spaces
 
     :math:`ilr: S^D \rightarrow \mathbb{R}^{D-1}`
 
     The ilr transformation is defined as follows
 
-    :math:`\[ilr(x) = [ \langle x, e_1 \rangle, ... ,
-              \langle x, e_{D-1} \rangle]\]`
+    :math:`ilr(x) =
+    [\langle x, e_1 \rangle_a,...,\langle x, e_{D-1} \rangle_a]`
 
-    where :math:`[e_1,...,e_{D-1}` is an orthonormal basis in the simplex.
+    where :math:`[e_1,...,e_{D-1}]` is an orthonormal basis in the simplex.
 
     If an orthornormal basis isn't specified, the J. J. Egozcue orthonormal
     basis derived from Gram-Schmidt orthogonalization will be used by
@@ -513,7 +518,7 @@ def ilr(mat, basis=None, check=True):
     >>> from skbio.stats.composition import ilr
     >>> x = np.array([.1, .3, .4, .2])
     >>> ilr(x)
-    array([-0.7768362 , -0.68339802,  0.11704769])
+    array([-0.7768362, -0.68339802,  0.11704769])
 
     """
     mat = closure(mat)
@@ -525,8 +530,25 @@ def ilr(mat, basis=None, check=True):
 
 
 def ilr_inv(mat, basis=None, check=True):
-    """
+    r"""
     Performs inverse isometric log ratio transform [1]_.
+
+    This function transforms compositions from the real space to
+    Aitchison geometry. The :math: ilr` transform is both an isometry,
+    and an isomorphism defined on the following spaces
+
+    :math:`ilr^{-1}: \mathbb{R}^{D-1} \rightarrow S^D`
+
+    The inverse ilr transformation is defined as follows
+
+    :math:`ilr^{-1}(x) = \bigoplus_{i=1}^{D-1} x \odot e_i`
+
+    where :math:`[e_1,...,e_{D-1}]` is an orthonormal basis in the simplex.
+
+    If an orthornormal basis isn't specified, the J. J. Egozcue orthonormal
+    basis derived from Gram-Schmidt orthogonalization will be used by
+    default.
+
 
     Parameters
     ----------
@@ -562,7 +584,7 @@ def ilr_inv(mat, basis=None, check=True):
 
 
 def centralize(mat):
-    """Center data around its geometric average.
+    r"""Center data around its geometric average.
 
     Parameters
     ----------
@@ -620,8 +642,6 @@ def _check_orthogonality(basis):
     basis: numpy.ndarray
         basis in the Aitchison simplex
     """
-    for i in range(len(basis)):
-        for j in range(i+1, len(basis)):
-            if not np.allclose(inner(basis[i, :], basis[j, :]), 0,
-                               rtol=1e-4, atol=1e-6):
-                raise ValueError("Aitchison basis is not orthonormal")
+    if not np.allclose(inner(basis, basis), np.identity(len(basis)),
+                       rtol=1e-4, atol=1e-6):
+        raise ValueError("Aitchison basis is not orthonormal")
