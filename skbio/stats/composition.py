@@ -356,6 +356,14 @@ def inner(x, y):
     ----------
     .. [1] V. Pawlowsky-Glahn. "Lecture Notes on Compositional Data Analysis"
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from skbio.stats.composition import inner
+    >>> x = np.array([.1, .3, .4, .2])
+    >>> y = np.array([.2, .4, .2, .2])
+    >>> inner(x, y)
+    0.21078524737545548
     """
     x = closure(x)
     y = closure(y)
@@ -407,7 +415,7 @@ def clr(mat):
     --------
     >>> import numpy as np
     >>> from skbio.stats.composition import clr
-    >>> x = np.array([.1,.3,.4, .2])
+    >>> x = np.array([.1, .3, .4, .2])
     >>> clr(x)
     array([-0.79451346,  0.30409883,  0.5917809 , -0.10136628])
 
@@ -450,6 +458,14 @@ def clr_inv(mat):
     ----------
     .. [1] V. Pawlowsky-Glahn. "Lecture Notes on Compositional Data Analysis"
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from skbio.stats.composition import clr_inv
+    >>> x = np.array([.1, .3, .4, .2])
+    >>> clr_inv(x)
+    array([ 0.21383822,  0.26118259,  0.28865141,  0.23632778])
+
     """
     return closure(np.exp(mat))
 
@@ -490,6 +506,15 @@ def ilr(mat, basis=None, check=True):
     ----------
     .. [1] J. J. Egozcue "Isometric Logratio Transformations for
            Compositional Data Analysis"
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from skbio.stats.composition import ilr
+    >>> x = np.array([.1, .3, .4, .2])
+    >>> ilr(x)
+    array([-0.7768362 , -0.68339802,  0.11704769])
+
     """
     mat = closure(mat)
     if basis is None:
@@ -518,6 +543,15 @@ def ilr_inv(mat, basis=None, check=True):
     ----------
     .. [1] J. J. Egozcue "Isometric Logratio Transformations for
            Compositional Data Analysis"
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from skbio.stats.composition import ilr
+    >>> x = np.array([.1, .3, .6,])
+    >>> ilr_inv(x)
+    array([ 0.34180297,  0.29672718,  0.22054469,  0.14092516])
+
     """
 
     if basis is None:
