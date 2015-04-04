@@ -515,7 +515,7 @@ def ilr(mat, basis=None, check=True):
     >>> from skbio.stats.composition import ilr
     >>> x = np.array([.1, .3, .4, .2])
     >>> ilr(x)
-    array([-0.7768362, -0.68339802,  0.11704769])
+    array([-0.7768362 , -0.68339802,  0.11704769])
 
     """
     mat = closure(mat)
