@@ -99,7 +99,7 @@ array([ 0.25,  0.25,  0.5 ])
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import scipy.stats as ss
-
+from skbio import TreeNode
 
 def closure(mat):
     """
@@ -375,15 +375,8 @@ def inner(x, y):
     """
     x = closure(x)
     y = closure(y)
-    D1 = x.shape[-1]
-    D2 = y.shape[-1]
-    if D1 != D2:
-        raise ValueError("Compositions must have the same dimensions")
-    D = D1
-    M = np.ones((D, D))*-1 + np.identity(D)*D
-    a = clr(x)
-    b = clr(y).T
-    return np.dot(np.dot(a, M), b) / D
+    a, b = clr(x), clr(y)
+    return a.dot(b.T)
 
 
 def clr(mat):
