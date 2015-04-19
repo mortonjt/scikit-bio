@@ -447,7 +447,7 @@ def clr_inv(mat):
 
     Parameters
     ----------
-    mat : numpy.ndarray, float
+    mat : array_like, float
        a matrix of real values where
        rows = transformed compositions and
        columns = components
@@ -498,7 +498,7 @@ def ilr(mat, basis=None, check=True):
        rows = compositions and
        columns = components
 
-    basis: numpy.ndarray, optional
+    basis: numpy.ndarray, float, optional
         orthonormal basis for Aitchison simplex
         defaults to J.J.Egozcue orthonormal basis
 
@@ -543,12 +543,12 @@ def ilr_inv(mat, basis=None, check=True):
 
     Parameters
     ----------
-    mat: numpy.ndarray
+    mat: numpy.ndarray, float
        a matrix of transformed proportions where
        rows = compositions and
        columns = components
 
-    basis: numpy.ndarray, optional
+    basis: numpy.ndarray, float, optional
         orthonormal basis for Aitchison simplex
         defaults to J.J.Egozcue orthonormal basis
 
