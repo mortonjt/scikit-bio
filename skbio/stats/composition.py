@@ -375,15 +375,8 @@ def inner(x, y):
     """
     x = closure(x)
     y = closure(y)
-    D1 = x.shape[-1]
-    D2 = y.shape[-1]
-    if D1 != D2:
-        raise ValueError("Compositions must have the same dimensions")
-    D = D1
-    M = np.ones((D, D))*-1 + np.identity(D)*D
-    a = clr(x)
-    b = clr(y).T
-    return np.dot(np.dot(a, M), b) / D
+    a, b = clr(x), clr(y)
+    return a.dot(b.T)
 
 
 def clr(mat):
@@ -520,10 +513,10 @@ def ilr(mat, basis=None, check=True):
     """
     mat = closure(mat)
     if basis is None:
-        basis = _gram_schmidt_basis(mat.shape[-1])
+        basis = clr_inv(_gram_schmidt_basis(mat.shape[-1]))
     elif check:
         _check_orthogonality(basis)
-    return np.dot(clr(mat), basis.T)
+    return inner(mat, basis)
 
 
 def ilr_inv(mat, basis=None, check=True):

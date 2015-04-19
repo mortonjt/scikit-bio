@@ -151,8 +151,12 @@ class CompositionTests(TestCase):
         npt.assert_allclose(self.cdata2, np.array([2, 2, 6]))
 
     def test_inner(self):
-        a = inner(self.cdata7, self.cdata7)
-        npt.assert_allclose(a, 0.66666666666666663)
+        a = inner(self.cdata5, self.cdata5)
+        npt.assert_allclose(a, np.array([[0.80463264, -0.50766667],
+                                         [-0.50766667, 0.32030201]]))
+
+        b = inner(self.cdata7, self.cdata7)
+        npt.assert_allclose(b, 0.66666666666666663)
 
         # Make sure that orthogonality holds
         npt.assert_allclose(inner(self.ortho1, self.ortho1), np.identity(3),
