@@ -233,7 +233,7 @@ class TreeNode(SkbioObject):
         <BLANKLINE>
 
         """
-        self.children.extend([self._adopt(n) for n in nodes])
+        self.children.extend([self._adopt(n) for n in nodes[:]])
 
     def pop(self, index=-1):
         r"""Remove a `TreeNode` from `self`.
@@ -2648,101 +2648,6 @@ class TreeNode(SkbioObject):
         other_matrix = other.tip_tip_distances(endpoints=other_nodes)
 
         return dist_f(self_matrix, other_matrix)
-
-    def label_internal_nodes(self, names,
-                             self_before=True,
-                             self_after=False,
-                             include_self=True):
-        """
-        Labels the internal nodes given by a list.
-        The order in which these nodes are labeled will be indicated by
-        self_before and self_after
-
-        Parameters
-        ----------
-        name : array_like, str
-            list of strings to label internal nodes
-        self_before : bool
-            includes each node before its descendants if True
-        self_after : bool
-            includes each node after its descendants if True
-        include_self : bool
-            include the initial node if True
-
-        Raises
-        ------
-        ValueError
-            names must be strings
-
-        See Also
-        --------
-        traverse
-
-        Notes
-        -----
-        If the length of the names is smaller than the
-        number of internal nodes, some of the internal nodes
-        will never be labeled
-        """
-        if not isinstance(names[0], str):
-            raise ValueError('names need to be strings')
-
-        i = 0
-        for n in self.traverse(self_before=self_before,
-                               self_after=self_after,
-                               include_self=True):
-
-            if i >= len(names):
-                break
-            if n.is_tip():
-                continue
-            n.name = names[i]
-            i += 1
-
-    def bifurcate(self, remove_singles=True):
-        """ Restructures tree into a bifurcating tree
-        All nodes that have more than 2 children will
-        have additional intermediate nodes injected to ensure that
-        every node has only 2 children
-        Also, any nodes that have a single child will be collapsed
-        Parameters
-        ----------
-        remove_singles : bool, optional
-            Removes all nodes that have only a single child and relink
-            of their childrent to their parent node
-
-        Examples
-        --------
-        >>> from skbio import TreeNode
-        >>> from six import StringIO
-        >>> tree = TreeNode.read(StringIO("((a,b,g,h)c,(d,e)f)root;"))
-        >>> tree.bifurcate()
-        >>> str(tree)
-        ((h,(g,(a,b)))c,(d,e)f)root;
-        <BLANKLINE>
-        """
-        for n in self.traverse(include_self=True):
-            if n.is_tip():
-                continue
-            if len(n.children) == 1 and remove_singles:
-                i = n.children[0]
-                if i.is_tip():
-                    n.parent.append(i)
-                    n.parent.remove(n)
-                else:
-                    n.extend(i.children)
-                    n.remove(i)
-            elif len(n.children) > 2:
-                stack = n.children
-                curnode = n
-                while len(stack) > 2:
-                    ind = stack.pop()
-                    intermediate = TreeNode()
-                    curnode.children = [ind, intermediate]
-                    intermediate.children = stack
-                    intermediate.parent = curnode
-                    curnode = intermediate
-        self.assign_ids()
 
     def index_tree(self):
         """Index a tree for rapid lookups within a tree array

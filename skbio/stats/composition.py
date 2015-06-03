@@ -99,7 +99,7 @@ array([ 0.25,  0.25,  0.5 ])
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import scipy.stats as ss
-from skbio import TreeNode
+
 
 def closure(mat):
     """
@@ -378,6 +378,7 @@ def inner(x, y):
     a, b = clr(x), clr(y)
     return a.dot(b.T)
 
+
 def norm(x):
     """
     Calculates the Aitchison norm
@@ -399,7 +400,8 @@ def norm(x):
     numpy.ndarray
         list of norms
     """
-    return np.sqrt(np.diag(inner(x,x)))
+    return np.sqrt(np.diag(inner(x, x)))
+
 
 def distance(x, y):
     """
@@ -428,7 +430,8 @@ def distance(x, y):
     numpy.ndarray
         list of distances
     """
-    return norm(perturb_inv(x,y))
+    return norm(perturb_inv(x, y))
+
 
 def clr(mat):
     r"""
@@ -682,16 +685,11 @@ def phylogenetic_basis(treenode):
     array([[ 0.62985567,  0.18507216,  0.18507216],
            [ 0.28399541,  0.57597535,  0.14002925]])
     """
-    #basis, _ =  _sequential_binary_partition(treenode)
-    #return basis
-    #basis = {}
 
     nodes = [n for n in treenode.levelorder(include_self=True)]
 
-
     D = len(nodes)
     n_tips = sum([n.is_tip() for n in nodes])
-    n_nontips = len(nodes) - n_tips
 
     # keeps track of k, r, s, t for all of the internal nodes
     history = np.zeros((4, D-1))
@@ -703,78 +701,56 @@ def phylogenetic_basis(treenode):
         # left or right child
         child_idx = int(nodes[j].parent.children[0] == nodes[j])
         parent_idx = (j+1)//2-1
-        if len(nodes[j].children)==0:
+        if len(nodes[j].children) == 0:
             history[child_idx+1, parent_idx] = 1
         else:
             # number of tips in child node
-            history[child_idx+1, parent_idx] = \
-              history[1, j] + history[2, j]
+            parent_history = history[1, j] + history[2, j]
+            history[child_idx+1, parent_idx] = parent_history
 
     # Fill in k and t for all of the nodes
     # and find the basis
     idx = 0
     for n in nodes:
         if len(n.children) == 0:
-            idx+=1
+            idx += 1
             continue
         if len(n.children) != 2:
             raise ValueError("Not a bifurcating tree!")
 
         parent_idx = (j+1)//2-1
 
-        r = history[1,idx]
-        s = history[2,idx]
+        r = history[1, idx]
+        s = history[2, idx]
 
         # get parent values
-        _k = history[0,parent_idx]
-        _r = history[1,parent_idx]
-        _s = history[2,parent_idx]
-        _t = history[3,parent_idx]
+        _k = history[0, parent_idx]
+        _r = history[1, parent_idx]
+        _s = history[2, parent_idx]
+        _t = history[3, parent_idx]
 
         a = np.sqrt(s / (r*(r+s)))
         b = -1*np.sqrt(r / (s*(r+s)))
 
         if n.parent is None:
-            basis[idx,:] = clr_inv([a]*r + [b]*s)
-            idx+=1
+            basis[idx, :] = clr_inv([a]*r + [b]*s)
+            idx += 1
             continue
 
-        if n.parent.children[0] == n: # right child
+        if n.parent.children[0] == n:  # right child
             k = _r + _k
             t = _t
-        else: # left child
+        else:  # left child
             k = _k
             t = _s + _t
-        basis[idx,:] = clr_inv([0]*k + [a]*r + [b]*s + [0]*t)
-        history[0,idx] = k
-        history[1,idx] = r
-        history[2,idx] = s
-        history[3,idx] = t
-        idx+=1
+        basis[idx, :] = clr_inv([0]*k + [a]*r + [b]*s + [0]*t)
+        history[0, idx] = k
+        history[1, idx] = r
+        history[2, idx] = s
+        history[3, idx] = t
+        idx += 1
     return basis
 
-def dendrogram(treenode):
-    """
-    Plots dendrogram
-
-    Parameters
-    ----------
-    treenode : skbio.TreeNode
-        Phylogenetic tree.
-    """
-    pass
-
-def _merge_two_dicts(x, y):
-    '''
-    Given two dicts, merge them into a new dict as a shallow copy.
-    '''
-    z = x.copy()
-    z.update(y)
-
-    if len(z) < len(x) + len(y):
-        raise ValueError("Non unique node names!")
-
-    return z
 
 def _gram_schmidt_basis(n):
     """
