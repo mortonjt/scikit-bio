@@ -395,7 +395,7 @@ def ancom(mat, cats,
           multicorr=False,
           tau=0.02,
           func=scipy.stats.ttest_ind):
-    """
+    r"""
     Calculates pairwise log ratios between all otus
     and performs a signficance test to determine if there is a
     significant difference in feature ratios with respect to the
