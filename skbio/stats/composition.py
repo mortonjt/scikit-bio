@@ -415,7 +415,7 @@ def ancom(mat, cats,
 
     Parameters
     ----------
-    mat: np.array
+    mat: array_like
        A 2D matrix where
        rows = samples
        columns = features
