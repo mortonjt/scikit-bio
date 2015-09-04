@@ -457,20 +457,20 @@ def ancom(mat, cats,
     Now lets load in a pandas dataframe with sample and feature ids
     for our data matrix.
     >>> table = pd.DataFrame(
-            [[10., 11., 10., 10., 10., 10., 10.],
-             [10.5, 11.5, 10.5, 10.5, 10.5, 10.5, 10.5],
-             [10., 11., 10., 10., 10., 10., 10.],
-             [20., 21., 10., 10., 10., 10., 10.],
-             [20.5, 21.5, 10.5, 10.5, 10.5, 10.5, 10.5],
-             [20.3, 21.3, 10.2, 10.3, 10.1, 10.6, 10.4]],
-            index=['s1','s2','s3','s4','s5','s6'],
-            columns=['b1','b2','b3','b4','b5','b6','b7'])
+    ...     [[10., 11., 10., 10., 10., 10., 10.],
+    ...      [10.5, 11.5, 10.5, 10.5, 10.5, 10.5, 10.5],
+    ...      [10., 11., 10., 10., 10., 10., 10.],
+    ...      [20., 21., 10., 10., 10., 10., 10.],
+    ...      [20.5, 21.5, 10.5, 10.5, 10.5, 10.5, 10.5],
+    ...      [20.3, 21.3, 10.2, 10.3, 10.1, 10.6, 10.4]],
+    ...     index=['s1','s2','s3','s4','s5','s6'],
+    ...     columns=['b1','b2','b3','b4','b5','b6','b7'])
 
     Then create a create a category vector.  In this scenerio, there
     are only two class, so the first three samples fall under the first
     class while the last three samples fall under the last class
     >>> cats = pd.Series([0, 0, 0, 1, 1, 1],
-                         index=['s1','s2','s3','s4','s5','s6'])
+    ...                  index=['s1','s2','s3','s4','s5','s6'])
 
     Now run ancom and see if there are any features that have any
     significant differences
