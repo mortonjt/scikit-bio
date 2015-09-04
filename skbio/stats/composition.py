@@ -48,6 +48,7 @@ Functions
    power
    clr
    centralize
+   ancom
 
 References
 ----------
@@ -90,6 +91,7 @@ array([ 0.25,  0.25,  0.5 ])
 
 from __future__ import absolute_import, division, print_function
 import numpy as np
+import pandas as pd
 import scipy.stats
 
 from skbio.util._decorator import experimental
@@ -415,11 +417,11 @@ def ancom(mat, cats,
 
     Parameters
     ----------
-    mat: array_like
+    mat: pd.DataFrame or array_like
        A 2D matrix where
        rows = samples
        columns = features
-    cat: np.array, float
+    cat: pd.Series or array_like
        Vector of categories
     multicorr: bool
        Runs multiple comparisons correction or not.
@@ -435,22 +437,77 @@ def ancom(mat, cats,
 
     Returns:
     --------
-    W : np.array, float
+    W : pd.Series
         List of W statistics
-    reject : np.array, bool
+    reject : pd.Series
         Indicates if the null hypothesis has been rejected
 
     References
     ----------
     ..[1] S. Mandal, 'Analysis of composition of microbiomes:
           a novel method for studying microbial composition'
-    """
 
-    mat = np.atleast_2d(mat)
-    cats = np.array(cats)
-    if np.any(mat == 0):
-        raise ValueError('Cannot handle zeros in feature table. '
-                         'Make sure to run a zero replacement method')
+    Examples
+    --------
+    First import all of the necessary modules
+
+    >>> from skbio.stats.composition import ancom
+    >>> import pandas as pd
+
+    Now lets load in a pandas dataframe with sample and feature ids
+    for our data matrix.
+    >>> table = pd.DataFrame(
+            [[10., 11., 10., 10., 10., 10., 10.],
+             [10.5, 11.5, 10.5, 10.5, 10.5, 10.5, 10.5],
+             [10., 11., 10., 10., 10., 10., 10.],
+             [20., 21., 10., 10., 10., 10., 10.],
+             [20.5, 21.5, 10.5, 10.5, 10.5, 10.5, 10.5],
+             [20.3, 21.3, 10.2, 10.3, 10.1, 10.6, 10.4]],
+            index=['s1','s2','s3','s4','s5','s6'],
+            columns=['b1','b2','b3','b4','b5','b6','b7'])
+
+    Then create a create a category vector.  In this scenerio, there
+    are only two class, so the first three samples fall under the first
+    class while the last three samples fall under the last class
+    >>> cats = pd.Series([0, 0, 0, 1, 1, 1],
+                         index=['s1','s2','s3','s4','s5','s6'])
+
+    Now run ancom and see if there are any features that have any
+    significant differences
+    >>> W, reject = ancom(table, cats)
+    >>> print(W)
+    b1    7
+    b2    7
+    b3    3
+    b4    3
+    b5    3
+    b6    3
+    b7    3
+    dtype: float64
+    >>> print(reject)
+    b1     True
+    b2     True
+    b3    False
+    b4    False
+    b5    False
+    b6    False
+    b7    False
+    dtype: bool
+    """
+    if len(mat) != len(cats):
+        raise ValueError('The number of samples in mat needs'
+                         'to be the same as the number of samples'
+                         'in cats')
+    mat = _check_composition(mat, ignore_zeros=False)
+    cats = pd.Series(cats)
+
+    mat = mat.sort_index()
+    cats = cats.sort_index()
+    labs = mat.columns
+
+    mat = np.atleast_2d(mat.values)
+    cats = np.array(cats.values)
+
     _logratio_mat = _log_compare(mat, cats, func)
     logratio_mat = _logratio_mat + _logratio_mat.T
 
@@ -482,7 +539,40 @@ def ancom(mat, cats,
     else:
         nu = cutoff[4]
     reject = W >= nu*n_feat
-    return W, reject
+    return pd.Series(W, index=labs), pd.Series(reject, index=labs)
+
+
+def _check_composition(x, ignore_zeros=True):
+    """
+    Checks to make sure that composition meets the mininum criteria
+    Also casts composition into a pandas dataframe
+
+    Parameters
+    ----------
+    x : array_like or pd.DataFrame
+       Input composition matrix
+       where rows=samples and columns=features
+
+    Returns
+    -------
+    pd.DataFrame
+       Validated composition matrix
+    """
+    if x.ndim > 2:
+        raise ValueError("Input matrix can only have two dimensions or less")
+    if isinstance(x, pd.DataFrame):
+        mat = closure(x)
+        samp_labs = x.index
+        feat_labs = x.columns
+    else:
+        mat = np.atleast_2d(x)
+        r, c = mat.shape
+        samp_labs = range(r)
+        feat_labs = range(c)
+    if np.any(mat == 0) and not ignore_zeros:
+        raise ValueError('Cannot handle zeros in compositions. '
+                         'Make sure to run a zero replacement method')
+    return pd.DataFrame(mat, index=samp_labs, columns=feat_labs)
 
 
 def _holm(p):
@@ -497,7 +587,7 @@ def _holm(p):
 
     Returns
     -------
-    numpy.array
+    numpy.arrayy
         corrected pvalues
     """
     K = len(p)
@@ -525,7 +615,7 @@ def _log_compare(mat, cats,
 
     Parameters
     ----------
-    mat: pd.DataFrame
+    mat: np.array
        rows = samples
        columns = features (i.e. OTUs)
     cat: np.array, float
