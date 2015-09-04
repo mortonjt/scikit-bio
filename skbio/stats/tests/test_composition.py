@@ -18,6 +18,7 @@ from skbio.stats.composition import (closure, multiplicative_replacement,
                                      clr, centralize, ancom, _holm)
 import scipy.stats
 
+
 class CompositionTests(TestCase):
 
     def setUp(self):
@@ -53,7 +54,7 @@ class CompositionTests(TestCase):
                                  normal(10, 1, L),
                                  normal(10, 1, L),
                                  np.concatenate((normal(20, 1, D),
-                                                 normal(100000,1, D))),
+                                                 normal(100000, 1, D))),
                                  normal(10, 1, L),
                                  normal(10, 1, L),
                                  normal(10, 1, L),
@@ -322,7 +323,7 @@ class CompositionTests(TestCase):
         npt.assert_allclose(reject.values,
                             np.array([True, True, False, False,
                                       True, False, False, False, False],
-                                      dtype=bool))
+                                     dtype=bool))
 
         with self.assertRaises(ValueError):
             ancom(self.bad3, self.cats2, multicorr=False)
@@ -334,8 +335,8 @@ class CompositionTests(TestCase):
         p = [0.005, 0.011, 0.02, 0.04, 0.13]
         corrected_p = p * np.arange(1, 6)[::-1]
         guessed_p = _holm(p)
-        for a,b in zip(corrected_p, guessed_p):
-            self.assertAlmostEqual(a,b)
+        for a, b in zip(corrected_p, guessed_p):
+            self.assertAlmostEqual(a, b)
 
 if __name__ == "__main__":
     main()

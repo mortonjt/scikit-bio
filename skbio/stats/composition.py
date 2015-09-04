@@ -633,7 +633,8 @@ def _log_compare(mat, cats,
     cs = np.unique(cats)
     for i in range(c-1):
         ratio = (log_mat[:, i].T - log_mat[:, i+1:].T).T
-        func = lambda x: stat_func(*[x[cats == k] for k in cs])
+        def func(x):
+            return stat_func(*[x[cats == k] for k in cs])
         m, p = np.apply_along_axis(func,
                                    axis=0,
                                    arr=ratio)
