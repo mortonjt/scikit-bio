@@ -13,29 +13,29 @@ from skbio.util import TestRunner
 # Add skbio.io to sys.modules to prevent cycles in our imports
 import skbio.io  # noqa
 # imports included for convenience
-from skbio.sequence import (
-    BiologicalSequence, NucleotideSequence, DNA, DNASequence, RNA, RNASequence,
-    Protein, ProteinSequence)
+from skbio.sequence import Sequence, DNA, RNA, Protein, GeneticCode
 from skbio.stats.distance import DistanceMatrix
 from skbio.alignment import (
     local_pairwise_align_ssw, SequenceCollection, Alignment)
-from skbio.tree import (
-    TreeNode, nj)
+from skbio.tree import TreeNode, nj
 from skbio.io import read, write
+from skbio._base import OrdinationResults
 
-__all__ = ['BiologicalSequence', 'NucleotideSequence', 'DNA', 'DNASequence',
-           'RNA', 'RNASequence', 'Protein', 'ProteinSequence',
+
+__all__ = ['Sequence', 'DNA', 'RNA', 'Protein', 'GeneticCode',
            'DistanceMatrix', 'local_pairwise_align_ssw', 'SequenceCollection',
-           'Alignment', 'TreeNode', 'nj', 'read', 'write']
+           'Alignment', 'TreeNode', 'nj', 'read', 'write', 'OrdinationResults']
 
 __credits__ = "https://github.com/biocore/scikit-bio/graphs/contributors"
-__version__ = "0.2.3-dev"
+__version__ = "0.4.0-dev"
 
 mottos = [
     # 03/15/2014
     "It's gonna get weird, bro.",
     # 05/14/2014
-    "no cog yay"
+    "no cog yay",
+    # 03/18/2015
+    "bincount!",
 ]
 motto = mottos[-1]
 

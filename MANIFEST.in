@@ -1,17 +1,24 @@
+include .coveragerc
 include CHANGELOG.md
-include COPYING.txt
 include CONTRIBUTING.md
+include COPYING.txt
+include Makefile
 include README.rst
 include RELEASE.md
 include checklist.py
+include asv.conf.json
 
 graft assets
+graft ci
 graft doc
 graft ipynbs
 graft licenses
 graft skbio
 
 prune doc/build
+prune doc/source/generated
 
 global-exclude *.pyc
 global-exclude *.pyo
+global-exclude *.so
+global-exclude .*.swp

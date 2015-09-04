@@ -9,6 +9,8 @@
 from __future__ import absolute_import, division, print_function
 from future.utils import viewitems
 
+from skbio.util._decorator import deprecated
+
 
 class _CompressedNode(object):
     """Represents a node in the compressed trie
@@ -17,18 +19,9 @@ class _CompressedNode(object):
     ----------
     key : string
         the key attached to the node
-
     values : list of objects, optional
         the values attached to this node
 
-    Attributes
-    ----------
-    values : list of objects
-        the values attached to this node
-    key : string
-        the key attached to the node
-    children : dict of {string: _CompressedNode}
-        the children nodes below this node
     """
 
     def __init__(self, key, values=None):
@@ -175,6 +168,13 @@ class _CompressedNode(object):
                 return node.find(key[index:])
         return []
 
+trie_deprecation_p = {
+    'as_of': '0.4.0', 'until': '0.4.1', 'reason': (
+        "scikit-bio's trie functionality will be replaced with "
+        "with functionality from a dedicated package. To track "
+        "progress, see [#937]"
+        "(https://github.com/biocore/scikit-bio/issues/937).")}
+
 
 class CompressedTrie(object):
     """ A compressed Trie for a list of (key, value) pairs
@@ -184,30 +184,31 @@ class CompressedTrie(object):
     pair_list : list of tuples, optional
         List of (key, value) pairs to initialize the Trie
 
-    Attributes
-    ----------
-    size
-    prefix_map
     """
 
+    @deprecated(**trie_deprecation_p)
     def __init__(self, pair_list=None):
         self._root = _CompressedNode("")
         if pair_list:
             for key, value in pair_list:
                 self.insert(key, value)
 
+    @deprecated(**trie_deprecation_p)
     def __nonzero__(self):
         return bool(self._root)
 
+    @deprecated(**trie_deprecation_p)
     def __len__(self):
         return len(self._root)
 
     @property
+    @deprecated(**trie_deprecation_p)
     def size(self):
         """int with the number of nodes in the Trie"""
         return self._root.size
 
     @property
+    @deprecated(**trie_deprecation_p)
     def prefix_map(self):
         """Dict with the prefix map
 
@@ -215,6 +216,7 @@ class CompressedTrie(object):
         """
         return self._root.prefix_map
 
+    @deprecated(**trie_deprecation_p)
     def insert(self, key, value):
         """Inserts key with value in Trie
 
@@ -228,6 +230,7 @@ class CompressedTrie(object):
         """
         self._root.insert(key, value)
 
+    @deprecated(**trie_deprecation_p)
     def find(self, key):
         """Searches for key and returns values stored for the key.
 
@@ -244,6 +247,7 @@ class CompressedTrie(object):
         return self._root.find(key)
 
 
+@deprecated(**trie_deprecation_p)
 def fasta_to_pairlist(seqs):
     """Yields (key, value) pairs, useful for populating a Trie object
 
@@ -252,10 +256,11 @@ def fasta_to_pairlist(seqs):
     seqs : Iterable
         tuples of the form ``(label, seq)``
 
-    Returns
-    -------
-    GeneratorType
-        yields tuples of the form ``(seq, label)``
+    Yields
+    ------
+    tuple
+        Tuple of the form ``(seq, label)``.
+
     """
     for label, seq in seqs:
         yield seq, label

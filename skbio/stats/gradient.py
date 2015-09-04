@@ -68,14 +68,14 @@ Check if we weighted the data or not:
 >>> print(trajectory_results.weighted)
 False
 
-Check the trajectory_results results of one of the categories:
+Check the results of one of the categories:
 
 >>> print(trajectory_results.categories[0].category)
 Treatment
 >>> print(trajectory_results.categories[0].probability)
 0.0118478282382
 
-Check the trajectory_results results of one group of one of the categories:
+Check the results of one group of one of the categories:
 
 >>> print(trajectory_results.categories[0].groups[0].name)
 Control
@@ -100,8 +100,10 @@ from collections import defaultdict
 from numbers import Integral
 
 import numpy as np
-from natsort import natsorted
+from natsort import realsorted
 from scipy.stats import f_oneway
+
+from skbio.util._decorator import experimental
 
 
 def _weight_by_vector(trajectories, w_vector):
@@ -218,6 +220,7 @@ class GroupResults(object):
 
     """
 
+    @experimental(as_of="0.4.0")
     def __init__(self, name, trajectory, mean, info, message):
         self.name = name
         self.trajectory = trajectory
@@ -225,6 +228,7 @@ class GroupResults(object):
         self.info = info
         self.message = message
 
+    @experimental(as_of="0.4.0")
     def to_files(self, out_f, raw_f):
         r"""Save the trajectory analysis results for a category group to files
         in text format.
@@ -270,12 +274,14 @@ class CategoryResults(object):
 
     """
 
+    @experimental(as_of="0.4.0")
     def __init__(self, category, probability, groups, message):
         self.category = category
         self.probability = probability
         self.groups = groups
         self.message = message
 
+    @experimental(as_of="0.4.0")
     def to_files(self, out_f, raw_f):
         r"""Save the trajectory analysis results for a category to files in
         text format.
@@ -316,11 +322,13 @@ class GradientANOVAResults(object):
 
     """
 
+    @experimental(as_of="0.4.0")
     def __init__(self, algorithm, weighted, categories):
         self.algorithm = algorithm
         self.weighted = weighted
         self.categories = categories
 
+    @experimental(as_of="0.4.0")
     def to_files(self, out_f, raw_f):
         r"""Save the trajectory analysis results to files in text format.
 
@@ -392,6 +400,7 @@ class GradientANOVA(object):
     # Should be defined by the derived classes
     _alg_name = None
 
+    @experimental(as_of="0.4.0")
     def __init__(self, coords, prop_expl, metadata_map,
                  trajectory_categories=None, sort_category=None, axes=3,
                  weighted=False):
@@ -448,6 +457,7 @@ class GradientANOVA(object):
         # Initialize the message buffer
         self._message_buffer = []
 
+    @experimental(as_of="0.4.0")
     def get_trajectories(self):
         r"""Compute the trajectories for each group in each category and run
         ANOVA over the results to test group independence.
@@ -463,8 +473,10 @@ class GradientANOVA(object):
         for cat, cat_groups in self._groups.items():
             # Loop through all the category values present in the current
             # category and compute the trajectory for each of them
-            res_by_group = [self._get_group_trajectories(group, sample_ids)
-                            for group, sample_ids in cat_groups.items()]
+            res_by_group = []
+            for group in sorted(cat_groups, key=lambda k: str(k)):
+                res_by_group.append(
+                    self._get_group_trajectories(group, cat_groups[group]))
 
             result.categories.append(_ANOVA_trajectories(cat, res_by_group))
 
@@ -530,7 +542,7 @@ class GradientANOVA(object):
             # Group samples by category
             gb = self._metadata_map.groupby(cat)
             for g, df in gb:
-                self._groups[cat][g] = natsorted(df.index, key=sort_val)
+                self._groups[cat][g] = realsorted(df.index, key=sort_val)
 
     def _get_group_trajectories(self, group_name, sids):
         r"""Compute the trajectory results for `group_name` containing the
@@ -781,6 +793,7 @@ class WindowDifferenceGradientANOVA(GradientANOVA):
 
     _alg_name = 'wdiff'
 
+    @experimental(as_of="0.4.0")
     def __init__(self, coords, prop_expl, metadata_map, window_size, **kwargs):
         super(WindowDifferenceGradientANOVA, self).__init__(coords, prop_expl,
                                                             metadata_map,

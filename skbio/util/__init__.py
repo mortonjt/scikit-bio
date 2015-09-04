@@ -18,6 +18,8 @@ Common functionality to support testing in skbio.
 
    get_data_path
    TestRunner
+   assert_ordination_results_equal
+   assert_data_frame_almost_equal
 
 Miscellaneous functionality
 ---------------------------
@@ -50,6 +52,7 @@ Warnings
    :toctree: generated/
 
    EfficiencyWarning
+   RepresentationWarning
 
 """
 
@@ -61,15 +64,20 @@ Warnings
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from ._warning import EfficiencyWarning
+from __future__ import absolute_import, division, print_function
+
+from ._warning import EfficiencyWarning, RepresentationWarning
 from ._exception import TestingUtilError
 from ._misc import (cardinal_to_ordinal, create_dir, find_duplicates, flatten,
                     is_casava_v180_or_later, remove_files, safe_md5)
-from ._testing import get_data_path, TestRunner
+from ._testing import (get_data_path, TestRunner,
+                       assert_ordination_results_equal,
+                       assert_data_frame_almost_equal)
 
-__all__ = ['EfficiencyWarning', 'TestingUtilError',
+__all__ = ['EfficiencyWarning', 'RepresentationWarning', 'TestingUtilError',
            'cardinal_to_ordinal', 'create_dir', 'find_duplicates', 'flatten',
            'is_casava_v180_or_later', 'remove_files', 'safe_md5',
-           'get_data_path', 'TestRunner']
+           'get_data_path', 'TestRunner', 'assert_ordination_results_equal',
+           'assert_data_frame_almost_equal']
 
 test = TestRunner(__file__).test

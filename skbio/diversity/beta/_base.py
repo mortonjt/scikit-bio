@@ -8,28 +8,38 @@
 
 from __future__ import absolute_import, division, print_function
 
-from warnings import warn
+from functools import partial
 
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
+from skbio.diversity.beta._unifrac import unweighted_unifrac, weighted_unifrac
 from skbio.stats.distance import DistanceMatrix
+from skbio.util._decorator import experimental, deprecated
 
 
-def pw_distances(counts, ids=None, metric="braycurtis"):
+def _get_skbio_metrics():
+    return {
+        'unweighted_unifrac': unweighted_unifrac,
+        'weighted_unifrac': weighted_unifrac,
+        }
+
+
+@experimental(as_of="0.4.0")
+def pw_distances(metric, counts, ids=None, **kwargs):
     """Compute distances between all pairs of columns in a counts matrix
 
     Parameters
     ----------
+    metric : str, callable
+        The pairwise distance function as a string or callable to use when
+        generating pairwise distances. See the scipy ``pdist`` docs and the
+        scikit-bio functions linked under *See Also* for available metrics.
     counts : 2D array_like of ints or floats
         Matrix containing count/abundance data where each row contains counts
         of observations in a given sample.
     ids : iterable of strs, optional
         Identifiers for each sample in ``counts``.
-    metric : str, optional
-        The name of the pairwise distance function to use when generating
-        pairwise distances. See the scipy ``pdist`` docs, linked under *See
-        Also*, for available metrics.
 
     Returns
     -------
@@ -44,22 +54,37 @@ def pw_distances(counts, ids=None, metric="braycurtis"):
 
     See Also
     --------
+    unweighted_unifrac
+    weighted_unifrac
     scipy.spatial.distance.pdist
     pw_distances_from_table
 
     """
+    _skbio_metrics = _get_skbio_metrics()
     num_samples = len(counts)
     if ids is not None and num_samples != len(ids):
         raise ValueError(
             "Number of rows in counts must be equal to number of provided "
             "ids.")
+    if metric in _skbio_metrics:
+        metric = _skbio_metrics[metric]
+
+    if callable(metric):
+        metric = partial(metric, **kwargs)
 
     distances = pdist(counts, metric)
     return DistanceMatrix(
         squareform(distances, force='tomatrix', checks=False), ids)
 
+pw_distances_from_table_deprecation_reason = (
+    "In the future, pw_distance will take a biom.table.Table object "
+    "and this function will be removed. You will need to update your "
+    "code to call pw_distances at that time.")
 
-def pw_distances_from_table(table, metric="braycurtis"):
+
+@deprecated(as_of="0.4.0", until="0.4.1",
+            reason=pw_distances_from_table_deprecation_reason)
+def pw_distances_from_table(table, metric='braycurtis'):
     """Compute distances between all pairs of samples in table
 
     Parameters
@@ -67,10 +92,10 @@ def pw_distances_from_table(table, metric="braycurtis"):
     table : biom.table.Table
         ``Table`` containing count/abundance data of observations across
         samples.
-    metric : str, optional
+    metric : str, callable, optional
         The name of the pairwise distance function to use when generating
-        pairwise distances. See the scipy ``pdist`` docs, linked under *See
-        Also*, for available metrics.
+        pairwise distances. See the scipy ``pdist`` docs and the scikit-bio
+        functions linked under *See Also* for available metrics.
 
     Returns
     -------
@@ -80,15 +105,13 @@ def pw_distances_from_table(table, metric="braycurtis"):
 
     See Also
     --------
+    unweighted_unifrac
+    weighted_unifrac
     scipy.spatial.distance.pdist
     biom.table.Table
     pw_distances
 
     """
-    warn("pw_distances_from_table is deprecated. In the future (tentatively "
-         "scikit-bio 0.3.0), pw_distance will take a biom.table.Table object "
-         "and this function will be removed. You will need to update your "
-         "code to call pw_distances at that time.", DeprecationWarning)
     sample_ids = table.ids(axis="sample")
     num_samples = len(sample_ids)
 

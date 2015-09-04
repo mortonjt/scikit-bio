@@ -9,15 +9,17 @@
 from __future__ import absolute_import, division, print_function
 
 from unittest import TestCase, main
+from collections import defaultdict
 
 import numpy as np
 import numpy.testing as nptest
 from scipy.stats import pearsonr
-from six import StringIO
 
+from skbio.io._fileobject import StringIO
 from skbio import DistanceMatrix, TreeNode
 from skbio.tree import (DuplicateNodeError, NoLengthError,
                         TreeError, MissingNodeError, NoParentError)
+from skbio.util import RepresentationWarning
 
 
 class TreeTests(TestCase):
@@ -49,6 +51,100 @@ class TreeTests(TestCase):
         self.complex_tree = TreeNode.read(StringIO(u"(((a,b)int1,(x,y,(w,z)int"
                                                    "2,(c,d)int3)int4),(e,f)int"
                                                    "5);"))
+
+    def test_observed_node_counts(self):
+        """returns observed nodes counts given vector of otu observation counts
+        """
+        # no OTUs observed
+        otu_counts = {}
+        expected = defaultdict(int)
+        self.assertEqual(self.simple_t.observed_node_counts(otu_counts),
+                         expected)
+        # error on zero count(s)
+        otu_counts = {'a': 0}
+        self.assertRaises(ValueError, self.simple_t.observed_node_counts,
+                          otu_counts)
+        otu_counts = {'a': 0, 'b': 0, 'c': 0, 'd': 0}
+        self.assertRaises(ValueError, self.simple_t.observed_node_counts,
+                          otu_counts)
+
+        # all OTUs observed once
+        otu_counts = {'a': 1, 'b': 1, 'c': 1, 'd': 1}
+        expected = defaultdict(int)
+        expected[self.simple_t.find('root')] = 4
+        expected[self.simple_t.find('i1')] = 2
+        expected[self.simple_t.find('i2')] = 2
+        expected[self.simple_t.find('a')] = 1
+        expected[self.simple_t.find('b')] = 1
+        expected[self.simple_t.find('c')] = 1
+        expected[self.simple_t.find('d')] = 1
+        self.assertEqual(self.simple_t.observed_node_counts(otu_counts),
+                         expected)
+
+        # some OTUs observed twice
+        otu_counts = {'a': 2, 'b': 1, 'c': 1, 'd': 1}
+        expected = defaultdict(int)
+        expected[self.simple_t.find('root')] = 5
+        expected[self.simple_t.find('i1')] = 3
+        expected[self.simple_t.find('i2')] = 2
+        expected[self.simple_t.find('a')] = 2
+        expected[self.simple_t.find('b')] = 1
+        expected[self.simple_t.find('c')] = 1
+        expected[self.simple_t.find('d')] = 1
+        self.assertEqual(self.simple_t.observed_node_counts(otu_counts),
+                         expected)
+
+        otu_counts = {'a': 2, 'b': 1, 'c': 1, 'd': 2}
+        expected = defaultdict(int)
+        expected[self.simple_t.find('root')] = 6
+        expected[self.simple_t.find('i1')] = 3
+        expected[self.simple_t.find('i2')] = 3
+        expected[self.simple_t.find('a')] = 2
+        expected[self.simple_t.find('b')] = 1
+        expected[self.simple_t.find('c')] = 1
+        expected[self.simple_t.find('d')] = 2
+        self.assertEqual(self.simple_t.observed_node_counts(otu_counts),
+                         expected)
+
+        # some OTUs observed, others not observed
+        otu_counts = {'a': 2, 'b': 1}
+        expected = defaultdict(int)
+        expected[self.simple_t.find('root')] = 3
+        expected[self.simple_t.find('i1')] = 3
+        expected[self.simple_t.find('a')] = 2
+        expected[self.simple_t.find('b')] = 1
+        self.assertEqual(self.simple_t.observed_node_counts(otu_counts),
+                         expected)
+
+        otu_counts = {'d': 1}
+        expected = defaultdict(int)
+        expected[self.simple_t.find('root')] = 1
+        expected[self.simple_t.find('i2')] = 1
+        expected[self.simple_t.find('d')] = 1
+        self.assertEqual(self.simple_t.observed_node_counts(otu_counts),
+                         expected)
+
+        # error on non-tips
+        otu_counts = {'a': 2, 'e': 1}
+        self.assertRaises(MissingNodeError, self.simple_t.observed_node_counts,
+                          otu_counts)
+        otu_counts = {'a': 2, 'i1': 1}
+        self.assertRaises(MissingNodeError, self.simple_t.observed_node_counts,
+                          otu_counts)
+
+        # test with another tree
+        otu_counts = {}
+        expected = defaultdict(int)
+        self.assertEqual(self.complex_tree.observed_node_counts(otu_counts),
+                         expected)
+
+        otu_counts = {'e': 42, 'f': 1}
+        expected[self.complex_tree.root()] = 43
+        expected[self.complex_tree.find('int5')] = 43
+        expected[self.complex_tree.find('e')] = 42
+        expected[self.complex_tree.find('f')] = 1
+        self.assertEqual(self.complex_tree.observed_node_counts(otu_counts),
+                         expected)
 
     def test_count(self):
         """Get node counts"""
@@ -90,7 +186,16 @@ class TreeTests(TestCase):
         """Extend a few nodes"""
         second_tree = TreeNode.read(StringIO(u"(x1,y1)z1;"))
         third_tree = TreeNode.read(StringIO(u"(x2,y2)z2;"))
+        first_tree = TreeNode.read(StringIO(u"(x1,y1)z1;"))
+        fourth_tree = TreeNode.read(StringIO(u"(x2,y2)z2;"))
         self.simple_t.extend([second_tree, third_tree])
+
+        first_tree.extend(fourth_tree.children)
+        self.assertEqual(0, len(fourth_tree.children))
+        self.assertEqual(first_tree.children[0].name, 'x1')
+        self.assertEqual(first_tree.children[1].name, 'y1')
+        self.assertEqual(first_tree.children[2].name, 'x2')
+        self.assertEqual(first_tree.children[3].name, 'y2')
 
         self.assertEqual(self.simple_t.children[0].name, 'i1')
         self.assertEqual(self.simple_t.children[1].name, 'i2')
@@ -598,8 +703,22 @@ class TreeTests(TestCase):
 
     def test_tip_tip_distances_no_length(self):
         t = TreeNode.read(StringIO(u"((a,b)c,(d,e)f);"))
-        with self.assertRaises(NoLengthError):
-            t.tip_tip_distances()
+        exp_t = TreeNode.read(StringIO(u"((a:0,b:0)c:0,(d:0,e:0)f:0);"))
+        exp_t_dm = exp_t.tip_tip_distances()
+
+        t_dm = nptest.assert_warns(RepresentationWarning, t.tip_tip_distances)
+        self.assertEqual(t_dm, exp_t_dm)
+
+        for node in t.preorder():
+            self.assertIs(node.length, None)
+
+    def test_tip_tip_distances_missing_length(self):
+        t = TreeNode.read(StringIO(u"((a,b:6)c:4,(d,e:0)f);"))
+        exp_t = TreeNode.read(StringIO(u"((a:0,b:6)c:4,(d:0,e:0)f:0);"))
+        exp_t_dm = exp_t.tip_tip_distances()
+
+        t_dm = nptest.assert_warns(RepresentationWarning, t.tip_tip_distances)
+        self.assertEqual(t_dm, exp_t_dm)
 
     def test_neighbors(self):
         """Get neighbors of a node"""

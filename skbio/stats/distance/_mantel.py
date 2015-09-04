@@ -18,8 +18,10 @@ import scipy.misc
 from scipy.stats import pearsonr, spearmanr
 
 from skbio.stats.distance import DistanceMatrix
+from skbio.util._decorator import experimental
 
 
+@experimental(as_of="0.4.0")
 def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
            strict=True, lookup=None):
     """Compute correlation between distance matrices using the Mantel test.
@@ -177,7 +179,7 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
     a two-sided test with 999 permutations:
 
     >>> coeff, p_value, n = mantel(x, y)
-    >>> round(coeff, 4)
+    >>> print(round(coeff, 4))
     0.7559
 
     Thus, we see a moderate-to-strong positive correlation (:math:`r_M=0.7559`)
@@ -230,7 +232,7 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
     example where all distance matrix IDs matched:
 
     >>> coeff, p_value, n = mantel(x, y, lookup=lookup)
-    >>> round(coeff, 4)
+    >>> print(round(coeff, 4))
     0.7559
 
     ``mantel`` also accepts input that is ``array_like``. For example, if we
@@ -244,7 +246,7 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
     ...      [2, 0, 6],
     ...      [7, 6, 0]]
     >>> coeff, p_value, n = mantel(x, y)
-    >>> round(coeff, 4)
+    >>> print(round(coeff, 4))
     0.7559
 
     It is import to note that reordering/matching of IDs (and hence the
@@ -297,6 +299,7 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
     return orig_stat, p_value, n
 
 
+@experimental(as_of="0.4.0")
 def pwmantel(dms, labels=None, method='pearson', permutations=999,
              alternative='two-sided', strict=True, lookup=None):
     """Run Mantel tests for every pair of given distance matrices.
@@ -353,19 +356,10 @@ def pwmantel(dms, labels=None, method='pearson', permutations=999,
 
     Examples
     --------
-    Import the functionality we'll use in the following examples. The call to
-    ``pd.set_option`` ensures consistent ``DataFrame`` formatting across
-    different versions of pandas. This call is not necessary for normal
-    use; it is only included here so that the doctests will pass.
+    Import the functionality we'll use in the following examples:
 
-    >>> import pandas as pd
     >>> from skbio import DistanceMatrix
     >>> from skbio.stats.distance import pwmantel
-    >>> try:
-    ...     # not necessary for normal use
-    ...     pd.set_option('show_dimensions', True)
-    ... except KeyError:
-    ...     pass
 
     Define three 3x3 distance matrices:
 
@@ -389,8 +383,6 @@ def pwmantel(dms, labels=None, method='pearson', permutations=999,
     x   y     0.755929     NaN  3  pearson             0   two-sided
         z    -0.755929     NaN  3  pearson             0   two-sided
     y   z    -0.142857     NaN  3  pearson             0   two-sided
-    <BLANKLINE>
-    [3 rows x 6 columns]
 
     Note that we passed ``permutations=0`` to suppress significance tests; the
     p-values in the output are labelled ``NaN``.
