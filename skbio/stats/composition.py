@@ -696,7 +696,7 @@ def ancom(mat, cats,
     ...     columns=['b1','b2','b3','b4','b5','b6','b7'])
 
     Then create a create a category vector.  In this scenerio, there
-    are only two class, so the first three samples fall under the first
+    are only two classes, so the first three samples fall under the first
     class while the last three samples fall under the last class
     >>> cats = pd.Series([0, 0, 0, 1, 1, 1],
     ...                  index=['s1','s2','s3','s4','s5','s6'])
@@ -724,21 +724,19 @@ def ancom(mat, cats,
     dtype: bool
     """
     if len(mat) != len(cats):
-        raise ValueError('The number of samples in mat needs'
-                         'to be the same as the number of samples'
+        raise ValueError('The number of samples in mat needs' + \
+                         'to be the same as the number of samples' + \
                          'in cats')
     mat = _check_composition(mat, ignore_zeros=False)
     cats = pd.Series(cats)
 
-    mat = mat.sort_index()
+    mat.sort_index(inplace=True)
     cats = cats.sort_index()
     labs = mat.columns
 
-    mat = np.atleast_2d(mat.values)
-    cats = np.array(cats.values)
     n_samp, n_feat = mat.shape
 
-    _logratio_mat = _log_compare(mat, cats, func)
+    _logratio_mat = _log_compare(mat.values, cats.values, func)
     logratio_mat = _logratio_mat + _logratio_mat.T
 
     # Multiple comparisons
@@ -754,8 +752,8 @@ def ancom(mat, cats,
         return pd.Series(W, index=labs), pd.Series(reject, index=labs)
 
     cutoff = c_start - np.linspace(0.05, 0.25, 5)
-    dels = np.zeros(len(cutoff))
-    prop_cut = np.zeros(len(cutoff), dtype=np.float32)
+    dels = np.zeros_like(cutoff)
+    prop_cut = np.zeros_like(cutoff, dtype=np.float32)
     for cut in range(len(cutoff)):
         prop_cut[cut] = sum(W > n_feat*cutoff[cut]) / len(W)
     for i in range(len(cutoff)-1):
@@ -783,6 +781,8 @@ def _check_composition(x, ignore_zeros=True):
     x : array_like or pd.DataFrame
        Input composition matrix
        where rows=samples and columns=features
+    ignore_zeros : bool
+       Specifies if compositions are allowed to have zeros
 
     Returns
     -------
