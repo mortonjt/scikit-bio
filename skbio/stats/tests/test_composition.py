@@ -13,10 +13,11 @@ import numpy as np
 import numpy.testing as npt
 from numpy.random import normal
 import pandas as pd
+import scipy
 from skbio.stats.composition import (closure, multiplicative_replacement,
                                      perturb, perturb_inv, power, inner,
                                      clr, clr_inv, ilr, ilr_inv,
-                                     centralize)
+                                     centralize, _holm, ancom)
 
 
 class CompositionTests(TestCase):
@@ -47,6 +48,33 @@ class CompositionTests(TestCase):
         self.rdata1 = [[0.70710678, -0.70710678, 0., 0.],
                        [0.40824829, 0.40824829, -0.81649658, 0.],
                        [0.28867513, 0.28867513, 0.28867513, -0.8660254]]
+        self.table1 = np.array([
+            [10, 10.5, 10, 20, 20.5, 20.3],
+            [11, 11.5, 11, 21, 21.5, 21.3],
+            [10, 10.5, 10, 10, 10.5, 10.2],
+            [10, 10.5, 10, 10, 10.5, 10.3],
+            [10, 10.5, 10, 10, 10.5, 10.1],
+            [10, 10.5, 10, 10, 10.5, 10.6],
+            [10, 10.5, 10, 10, 10.5, 10.4]]).T
+        self.cats1 = [0, 0, 0, 1, 1, 1]
+
+        D, L = 40, 80
+        np.random.seed(0)
+        self.table2 = np.vstack((np.concatenate((normal(10, 1, D),
+                                                 normal(200, 1, D))),
+                                 np.concatenate((normal(20, 1, D),
+                                                 normal(100000, 1, D))),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L),
+                                 np.concatenate((normal(20, 1, D),
+                                                 normal(100000, 1, D))),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L)))
+        self.table2 = np.absolute(self.table2)
+        self.table2 = self.table2.astype(np.int).T
+        self.cats2 = np.array([0]*D + [1]*D)
 
         # Bad datasets
         self.bad1 = np.array([1, 2, -1])
@@ -302,13 +330,13 @@ class CompositionTests(TestCase):
                           pd.Series(self.cats1),
                           multicorr=False)
         npt.assert_allclose(W.values,
-                            np.array([7., 7., 3., 3., 3., 3., 3.]))
+                            np.array([6, 6, 2, 2, 2, 2, 2]))
         npt.assert_allclose(reject.values,
                             np.array([True, True, False, False,
                                       False, False, False], dtype=bool))
         W, reject = ancom(self.table1, self.cats1, multicorr=False)
         npt.assert_allclose(W.values,
-                            np.array([7., 7., 3., 3., 3., 3., 3.]))
+                            np.array([6, 6, 2, 2, 2, 2, 2]))
         npt.assert_allclose(reject.values,
                             np.array([True, True, False, False,
                                       False, False, False], dtype=bool))
@@ -318,17 +346,16 @@ class CompositionTests(TestCase):
                           multicorr=True,
                           func=scipy.stats.mannwhitneyu)
         npt.assert_allclose(W.values,
-                            np.array([1., 1., 1., 1., 1., 1., 1.]))
+                            np.array([0, 0, 0, 0, 0, 0, 0]))
         npt.assert_allclose(reject.values,
-                            np.array([True,  True,  True,  True,
-                                      True,  True,  True], dtype=bool))
+                            np.array([False]*7, dtype=bool))
 
         W, reject = ancom(self.table1,
                           self.cats1,
                           multicorr=False,
                           func=scipy.stats.mannwhitneyu)
         npt.assert_allclose(W.values,
-                            np.array([7., 7., 3., 3., 3., 3., 3.]))
+                            np.array([6, 6, 2, 2, 2, 2, 2]))
         npt.assert_allclose(reject.values,
                             np.array([True,  True, False, False,
                                       False, False, False], dtype=bool))
@@ -339,8 +366,8 @@ class CompositionTests(TestCase):
                           func=scipy.stats.mannwhitneyu)
 
         npt.assert_allclose(W.values,
-                            np.array([9.,  9.,  4.,  4.,  9.,
-                                      4.,  4.,  4.,  4.]))
+                            np.array([8, 8, 3, 3,
+                                      8, 3, 3, 3, 3]))
         npt.assert_allclose(reject.values,
                             np.array([True, True, False, False,
                                       True, False, False, False, False],
