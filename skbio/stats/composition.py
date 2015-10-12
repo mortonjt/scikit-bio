@@ -434,7 +434,7 @@ def ancom(mat, cats,
        A constant used to determine an appropriate
        cutoff (default=0.02)
     theta : float
-       Lower bound for the number of differiential features
+       Lower bound for the proportion of differiential features
        (default=0.1)
     func: function
        A statistical signficance function to test for
