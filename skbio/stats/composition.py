@@ -705,13 +705,13 @@ def ancom(mat, cats,
     significant differences
     >>> W, reject = ancom(table, cats)
     >>> print(W)
-    b1    7
-    b2    7
-    b3    3
-    b4    3
-    b5    3
-    b6    3
-    b7    3
+    b1    6
+    b2    6
+    b3    2
+    b4    2
+    b5    2
+    b6    2
+    b7    2
     dtype: float64
     >>> print(reject)
     b1     True
