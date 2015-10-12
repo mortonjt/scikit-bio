@@ -712,7 +712,7 @@ def ancom(mat, cats,
     b5    2
     b6    2
     b7    2
-    dtype: float64
+    dtype: int64
     >>> print(reject)
     b1     True
     b2     True
