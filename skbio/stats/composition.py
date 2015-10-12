@@ -396,6 +396,7 @@ def ancom(mat, cats,
           alpha=0.05,
           multicorr=False,
           tau=0.02,
+          theta=0.1,
           func=scipy.stats.ttest_ind):
     r"""
     Calculates pairwise log ratios between all otus
@@ -423,13 +424,18 @@ def ancom(mat, cats,
        columns = features
     cat: pd.Series or array_like
        Vector of categories
+    alpha : float
+       Significance level for each of the statistical tests
     multicorr: bool
        Runs multiple comparisons correction or not.
        If specified, this will run Holm-Boniferroni
        correction
     tau: float
        A constant used to determine an appropriate
-       cutoff (@wdwvt1 can you comment here plz?)
+       cutoff (default=0.02)
+    theta : float
+       Lower bound for the number of differiential features
+       (default=0.1)
     func: function
        A statistical signficance function to test for
        signficance between classes.
@@ -507,28 +513,30 @@ def ancom(mat, cats,
 
     mat = np.atleast_2d(mat.values)
     cats = np.array(cats.values)
+    n_samp, n_feat = mat.shape
 
     _logratio_mat = _log_compare(mat, cats, func)
     logratio_mat = _logratio_mat + _logratio_mat.T
 
-    n_samp, n_feat = mat.shape
     # Multiple comparisons
     if multicorr:
-        for i in range(n_feat):
-            pvalues = _holm(logratio_mat[i, :])
-            logratio_mat[i, :] = pvalues
+        logratio_mat = np.apply_along_axis(_holm, 1, logratio_mat)
 
-    W = np.zeros(n_feat)
-    for i in range(n_feat):
-        W[i] = (logratio_mat[i, :] < alpha).sum()
-    c_start = max(W)/n_feat
+    np.fill_diagonal(logratio_mat, 1)
+
+    W = (logratio_mat < alpha).sum(axis=1)
+    c_start = max(W) / n_feat
+    if c_start < theta:
+        reject = np.array([False] * len(W))
+        return pd.Series(W, index=labs), pd.Series(reject, index=labs)
+
     cutoff = c_start - np.linspace(0.05, 0.25, 5)
     dels = np.zeros(len(cutoff))
     prop_cut = np.zeros(len(cutoff), dtype=np.float32)
     for cut in range(len(cutoff)):
-        prop_cut[cut] = sum(W > n_feat*cutoff[cut])/len(W)
+        prop_cut[cut] = sum(W > n_feat*cutoff[cut]) / len(W)
     for i in range(len(cutoff)-1):
-        dels[i] = abs(prop_cut[i]-prop_cut[i+1])
+        dels[i] = abs(prop_cut[i] - prop_cut[i+1])
 
     if (dels[1] < tau) and (dels[2] < tau) and (dels[3] < tau):
         nu = cutoff[1]
@@ -538,7 +546,7 @@ def ancom(mat, cats,
         nu = cutoff[3]
     else:
         nu = cutoff[4]
-    reject = W >= nu*n_feat
+    reject = (W >= nu*n_feat)
     return pd.Series(W, index=labs), pd.Series(reject, index=labs)
 
 
@@ -587,7 +595,7 @@ def _holm(p):
 
     Returns
     -------
-    numpy.arrayy
+    numpy.array
         corrected pvalues
     """
     K = len(p)
@@ -631,11 +639,13 @@ def _log_compare(mat, cats,
     log_ratio = np.zeros((c, c))
     log_mat = np.log(mat)
     cs = np.unique(cats)
+
+
+    def func(x):
+        return stat_func(*[x[cats == k] for k in cs])
+
     for i in range(c-1):
         ratio = (log_mat[:, i].T - log_mat[:, i+1:].T).T
-
-        def func(x):
-            return stat_func(*[x[cats == k] for k in cs])
         m, p = np.apply_along_axis(func,
                                    axis=0,
                                    arr=ratio)
