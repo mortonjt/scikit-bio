@@ -56,13 +56,15 @@ Functions
 
 References
 ----------
-.. [1] V. Pawlowsky-Glahn. "Lecture Notes on Compositional Data Analysis"
+.. [1] V. Pawlowsky-Glahn, "Lecture Notes on Compositional Data Analysis"
+   (2007)
 
-.. [2] J. J. Egozcue. "Isometric Logratio Transformations for
-   Compositional Data Analysis"
+.. [2] J. J. Egozcue.,  "Isometric Logratio Transformations for
+   Compositional Data Analysis" Mathematical Geology, 35.3 (2003)
 
-.. [3] J. A. Martin-Fernandez. "Dealing With Zeros and Missing Values in
-   Compositional Data Sets Using Nonparametric Imputation"
+.. [3] J. A. Martin-Fernandez,  "Dealing With Zeros and Missing Values in
+   Compositional Data Sets Using Nonparametric Imputation",
+   Mathematical Geology, 35.3 (2003)
 
 
 Examples
@@ -101,7 +103,6 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
 import scipy.stats
-
 from skbio.util._decorator import experimental
 
 
@@ -614,97 +615,112 @@ def centralize(mat):
     return perturb_inv(mat, cen)
 
 
-@experimental(as_of="0.4.0")
-def ancom(mat, cats,
+@experimental(as_of="0.4.0-dev")
+def ancom(table, grouping,
           alpha=0.05,
-          multicorr=False,
           tau=0.02,
           theta=0.1,
-          func=scipy.stats.ttest_ind):
-    r"""
-    Calculates pairwise log ratios between all otus
-    and performs a signficance test to determine if there is a
-    significant difference in feature ratios with respect to the
-    variable of interest
+          multiple_comparisons_correction=None,
+          significance_test=None):
+    r""" Performs a differential abundance test using ANCOM
 
-    In an experiment with only two treatments, this test tests the
-    following hypothesis for feature :math:`i`
-    :math:`H_{0i}:\E[\ln(u_i^{(1)})] = \E[\ln(u_i^{(2)})]`
+    This is done by calculating pairwise log ratios between all features
+    and performing a signficance test to determine if there is a significant
+    difference in feature ratios with respect to the variable of interest.
 
-    where :math:`u_i^{(1)}` is the mean abundance for feature
-    :math:`i` in the first group and :math:`u_i^{(2)}` is the
-    mean abundance for feature :math:`i` in the second group.
+    In an experiment with only two treatments, this test tests the following
+    hypothesis for feature :math:`i`
 
-    This method can be extended two an arbitrary number of classes
-    by passing in a different statistical function.
+    .. math::
 
+        H_{0i}: \mathbb{E}[\ln(u_i^{(1)})] = \mathbb{E}[\ln(u_i^{(2)})]
+
+    where :math:`u_i^{(1)}` is the mean abundance for feature :math:`i` in the
+    first group and :math:`u_i^{(2)}` is the mean abundance for feature
+    :math:`i` in the second group.
+
+    This method can be extended to an arbitrary number of classes by passing
+    in a different statistical function.
 
     Parameters
     ----------
-    mat: pd.DataFrame or array_like
-       A 2D matrix where
-       rows = samples
-       columns = features
-    cat: pd.Series or array_like
-       Vector of categories
-    alpha : float
+    table : pd.DataFrame
+       A 2D matrix of counts or proportions where the rows correspond to
+       samples and the columns correspond to features
+    grouping : pd.Series
+       Vector of group categories
+    alpha : float, optional
        Significance level for each of the statistical tests
-    multicorr: bool
-       Runs multiple comparisons correction or not.
-       If specified, this will run Holm-Boniferroni
-       correction
-    tau: float
-       A constant used to determine an appropriate
-       cutoff (default=0.02)
-    theta : float
-       Lower bound for the proportion of differiential features
-       (default=0.1)
-    func: function
-       A statistical signficance function to test for
-       signficance between classes.
-       The default is scipy.stats.ttest_ind
+    tau : float, optional
+       A constant used to determine an appropriate cutoff
+    theta : float, optional
+       Lower bound for the proportion of differential features.
+       This can can be anywhere between 0 and 1.
+    multiple_comparisons_correction : {None, 'holm-bonferroni'}, optional
+       The multiple comparison correction procedure to run
+    significance_test : function, optional
+       A statistical signficance function to test for signficance between
+       classes.
 
-    Returns:
+    Returns
+    -------
+    pd.DataFrame
+        A table of features, their W-statistics and whether the null hypothesis
+        is rejected.
+
+        `"W"` is the W-statistic, or number of features that a single feature
+        is tested to be significantly different against.
+
+        `"reject"` indicates if feature is significantly different or not
+
+    See Also
     --------
-    W : pd.Series
-        List of W statistics
-    reject : pd.Series
-        Indicates if the null hypothesis has been rejected
+    multiplicative_replacement
+
+    Notes
+    -----
+    This method cannot handle any zero counts as input, since the logarithm
+    of zero cannot be computed.  While this is an unsolved problem, many
+    studies have shown promising results by replacing the zeros with pseudo
+    counts.
 
     References
     ----------
-    ..[1] S. Mandal, 'Analysis of composition of microbiomes:
-          a novel method for studying microbial composition'
+    .. [1] Mandal et al. "Analysis of composition of microbiomes: a novel
+       method for studying microbial composition", Microbial Ecology in Health
+       & Disease, (2015), 26
 
     Examples
     --------
-    First import all of the necessary modules
+    First import all of the necessary modules:
 
     >>> from skbio.stats.composition import ancom
     >>> import pandas as pd
 
-    Now lets load in a pandas dataframe with sample and feature ids
-    for our data matrix.
-    >>> table = pd.DataFrame(
-    ...     [[10., 11., 10., 10., 10., 10., 10.],
-    ...      [10.5, 11.5, 10.5, 10.5, 10.5, 10.5, 10.5],
-    ...      [10., 11., 10., 10., 10., 10., 10.],
-    ...      [20., 21., 10., 10., 10., 10., 10.],
-    ...      [20.5, 21.5, 10.5, 10.5, 10.5, 10.5, 10.5],
-    ...      [20.3, 21.3, 10.2, 10.3, 10.1, 10.6, 10.4]],
-    ...     index=['s1','s2','s3','s4','s5','s6'],
-    ...     columns=['b1','b2','b3','b4','b5','b6','b7'])
+    Now let's load in a pd.DataFrame with sample and feature ids
+    for our data matrix:
 
-    Then create a create a category vector.  In this scenerio, there
+    >>> table = pd.DataFrame([[10., 11., 10., 10., 10., 10., 10.],
+    ...                       [10.5, 11.5, 10.5, 10.5, 10.5, 10.5, 10.5],
+    ...                       [10., 11., 10., 10., 10., 10., 10.],
+    ...                       [20., 21., 10., 10., 10., 10., 10.],
+    ...                       [20.5, 21.5, 10.5, 10.5, 10.5, 10.5, 10.5],
+    ...                       [20.3, 21.3, 10.2, 10.3, 10.1, 10.6, 10.4]],
+    ...                      index=['s1','s2','s3','s4','s5','s6'],
+    ...                      columns=['b1','b2','b3','b4','b5','b6','b7'])
+
+    Then create a grouping vector.  In this scenario, there
     are only two classes, so the first three samples fall under the first
-    class while the last three samples fall under the last class
-    >>> cats = pd.Series([0, 0, 0, 1, 1, 1],
-    ...                  index=['s1','s2','s3','s4','s5','s6'])
+    class while the last three samples fall under the second class:
 
-    Now run ancom and see if there are any features that have any
-    significant differences
-    >>> W, reject = ancom(table, cats)
-    >>> print(W)
+    >>> grouping = pd.Series([0, 0, 0, 1, 1, 1],
+    ...                      index=['s1','s2','s3','s4','s5','s6'])
+
+    Now run `ancom` and see if there are any features that have any
+    significant differences:
+
+    >>> results = ancom(table, grouping)
+    >>> results['W']
     b1    6
     b2    6
     b3    2
@@ -712,8 +728,13 @@ def ancom(mat, cats,
     b5    2
     b6    2
     b7    2
-    dtype: int64
-    >>> print(reject)
+    Name: W, dtype: int64
+
+    The W-statistic is the number of features that a single feature is
+    tested to be significantly different against.  In this scenario
+    there are b1 was significantly different from all of the other features:
+
+    >>> results['reject']
     b1     True
     b2     True
     b3    False
@@ -721,14 +742,28 @@ def ancom(mat, cats,
     b5    False
     b6    False
     b7    False
-    dtype: bool
+    Name: reject, dtype: bool
+
+    Here, there were only two features that estimated to
+    significantly change between the two groups.
+
     """
-    if len(mat) != len(cats):
-        raise ValueError('The number of samples in mat needs' + \
-                         'to be the same as the number of samples' + \
-                         'in cats')
-    mat = _check_composition(mat, ignore_zeros=False)
-    cats = pd.Series(cats)
+    if len(table) != len(grouping):
+        raise ValueError('The number of samples in table must be equal '
+                         '(%d samples) to the number of samples in '
+                         'grouping (%d samples).' % (len(table),
+                                                     len(grouping)))
+
+    if multiple_comparisons_correction is not None:
+        if multiple_comparisons_correction != 'holm-bonferroni':
+            raise ValueError('%s is not an available option'
+                             % multiple_comparisons_correction)
+
+    if significance_test is None:
+        significance_test = scipy.stats.ttest_ind
+
+    mat = _check_composition(table, ignore_zeros=False)
+    cats = pd.Series(grouping)
 
     mat.sort_index(inplace=True)
     cats = cats.sort_index()
@@ -736,44 +771,40 @@ def ancom(mat, cats,
 
     n_samp, n_feat = mat.shape
 
-    _logratio_mat = _log_compare(mat.values, cats.values, func)
+    _logratio_mat = _log_compare(mat.values, cats.values, significance_test)
     logratio_mat = _logratio_mat + _logratio_mat.T
 
     # Multiple comparisons
-    if multicorr:
-        logratio_mat = np.apply_along_axis(_holm, 1, logratio_mat)
-
+    if multiple_comparisons_correction == 'holm-bonferroni':
+        logratio_mat = np.apply_along_axis(_holm_bonferroni,
+                                           1, logratio_mat)
     np.fill_diagonal(logratio_mat, 1)
-
     W = (logratio_mat < alpha).sum(axis=1)
-    c_start = max(W) / n_feat
+    c_start = W.max() / n_feat
     if c_start < theta:
-        reject = np.array([False] * len(W))
-        return pd.Series(W, index=labs), pd.Series(reject, index=labs)
-
-    cutoff = c_start - np.linspace(0.05, 0.25, 5)
-    dels = np.zeros_like(cutoff)
-    prop_cut = np.zeros_like(cutoff, dtype=np.float32)
-    for cut in range(len(cutoff)):
-        prop_cut[cut] = sum(W > n_feat*cutoff[cut]) / len(W)
-    for i in range(len(cutoff)-1):
-        dels[i] = abs(prop_cut[i] - prop_cut[i+1])
-
-    if (dels[1] < tau) and (dels[2] < tau) and (dels[3] < tau):
-        nu = cutoff[1]
-    elif (dels[1] >= tau) and (dels[2] < tau) and (dels[3] < tau):
-        nu = cutoff[2]
-    elif (dels[2] >= tau) and (dels[3] < tau) and (dels[4] < tau):
-        nu = cutoff[3]
+        reject = np.zeros_like(W, dtype=bool)
     else:
-        nu = cutoff[4]
-    reject = (W >= nu*n_feat)
-    return pd.Series(W, index=labs), pd.Series(reject, index=labs)
+        # Select appropriate cutoff
+        cutoff = c_start - np.linspace(0.05, 0.25, 5)
+        prop_cut = np.array([(W > n_feat*cut).mean() for cut in cutoff])
+        dels = np.abs(prop_cut - np.roll(prop_cut, -1))
+        dels[-1] = 0
+        if (dels[1] < tau) and (dels[2] < tau) and (dels[3] < tau):
+            nu = cutoff[1]
+        elif (dels[1] >= tau) and (dels[2] < tau) and (dels[3] < tau):
+            nu = cutoff[2]
+        elif (dels[2] >= tau) and (dels[3] < tau) and (dels[4] < tau):
+            nu = cutoff[3]
+        else:
+            nu = cutoff[4]
+        reject = (W >= nu*n_feat)
+    return pd.DataFrame({'W': pd.Series(W, index=labs),
+                         'reject': pd.Series(reject, index=labs)})
 
 
 def _check_composition(x, ignore_zeros=True):
-    """
-    Checks to make sure that composition meets the mininum criteria
+    """ Checks to make sure that composition meets the mininum criteria
+
     Also casts composition into a pandas dataframe
 
     Parameters
@@ -790,7 +821,7 @@ def _check_composition(x, ignore_zeros=True):
        Validated composition matrix
     """
     if x.ndim > 2:
-        raise ValueError("Input matrix can only have two dimensions or less")
+        raise ValueError("Input matrix can onlx have two dimensions or less")
     if isinstance(x, pd.DataFrame):
         mat = closure(x)
         samp_labs = x.index
@@ -798,17 +829,16 @@ def _check_composition(x, ignore_zeros=True):
     else:
         mat = np.atleast_2d(x)
         r, c = mat.shape
-        samp_labs = range(r)
-        feat_labs = range(c)
+        samp_labs = np.arange(r)
+        feat_labs = np.arange(c)
     if np.any(mat == 0) and not ignore_zeros:
         raise ValueError('Cannot handle zeros in compositions. '
-                         'Make sure to run a zero replacement method')
+                         'Make sure to run a multiplicative_replacement')
     return pd.DataFrame(mat, index=samp_labs, columns=feat_labs)
 
 
-def _holm(p):
-    """
-    Performs Holm-Boniferroni correction for pvalues
+def _holm_bonferroni(p):
+    """ Performs Holm-Bonferroni correction for pvalues
     to account for multiple comparisons
 
     Parameters
@@ -837,21 +867,19 @@ def _holm(p):
 
 
 def _log_compare(mat, cats,
-                 stat_func=scipy.stats.ttest_ind):
-    """
-    Calculates pairwise log ratios between all otus
-    and performs a permutation tests to determine if there is a
-    significant difference in OTU ratios with respect to the
-    variable of interest
+                 significance_test=scipy.stats.ttest_ind):
+    """ Calculates pairwise log ratios between all features and performs a
+    permutation tests to determine if there is a significant difference in
+    feature ratios with respect to the variable of interest
 
     Parameters
     ----------
     mat: np.array
-       rows = samples
-       columns = features (i.e. OTUs)
-    cat: np.array, float
+       rows correspond to samples and columns correspond to
+       features (i.e. OTUs)
+    cats: np.array, float
        Vector of categories
-    stat_func: function
+    significance_test: function
         statistical test to run
 
     Returns:
@@ -863,9 +891,8 @@ def _log_compare(mat, cats,
     log_mat = np.log(mat)
     cs = np.unique(cats)
 
-
     def func(x):
-        return stat_func(*[x[cats == k] for k in cs])
+        return significance_test(*[x[cats == k] for k in cs])
 
     for i in range(c-1):
         ratio = (log_mat[:, i].T - log_mat[:, i+1:].T).T

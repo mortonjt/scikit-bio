@@ -14,10 +14,14 @@ import numpy.testing as npt
 from numpy.random import normal
 import pandas as pd
 import scipy
+import copy
+from scipy.stats import f_oneway
+from skbio.util import assert_data_frame_almost_equal
 from skbio.stats.composition import (closure, multiplicative_replacement,
                                      perturb, perturb_inv, power, inner,
                                      clr, clr_inv, ilr, ilr_inv,
-                                     centralize, _holm, ancom)
+                                     centralize, _holm_bonferroni,
+                                     _check_composition, ancom)
 
 
 class CompositionTests(TestCase):
@@ -48,16 +52,19 @@ class CompositionTests(TestCase):
         self.rdata1 = [[0.70710678, -0.70710678, 0., 0.],
                        [0.40824829, 0.40824829, -0.81649658, 0.],
                        [0.28867513, 0.28867513, 0.28867513, -0.8660254]]
+
+        # Basic count data with 2 groupings
         self.table1 = np.array([
-            [10, 10.5, 10, 20, 20.5, 20.3],
-            [11, 11.5, 11, 21, 21.5, 21.3],
-            [10, 10.5, 10, 10, 10.5, 10.2],
-            [10, 10.5, 10, 10, 10.5, 10.3],
-            [10, 10.5, 10, 10, 10.5, 10.1],
-            [10, 10.5, 10, 10, 10.5, 10.6],
-            [10, 10.5, 10, 10, 10.5, 10.4]]).T
+            [10, 10, 10, 20, 20, 20],
+            [11, 12, 11, 21, 21, 21],
+            [10, 11, 10, 10, 11, 10],
+            [10, 11, 10, 10, 10, 9],
+            [10, 11, 10, 10, 10, 10],
+            [10, 11, 10, 10, 10, 11],
+            [10, 13, 10, 10, 10, 12]]).T
         self.cats1 = [0, 0, 0, 1, 1, 1]
 
+        # Real valued data with 2 groupings
         D, L = 40, 80
         np.random.seed(0)
         self.table2 = np.vstack((np.concatenate((normal(10, 1, D),
@@ -75,6 +82,39 @@ class CompositionTests(TestCase):
         self.table2 = np.absolute(self.table2)
         self.table2 = self.table2.astype(np.int).T
         self.cats2 = np.array([0]*D + [1]*D)
+
+        # Real valued data with 2 groupings and no significant difference
+        self.table3 = np.array([
+            [10, 10.5, 10, 10, 10.5, 10.3],
+            [11, 11.5, 11, 11, 11.5, 11.3],
+            [10, 10.5, 10, 10, 10.5, 10.2],
+            [10, 10.5, 10, 10, 10.5, 10.3],
+            [10, 10.5, 10, 10, 10.5, 10.1],
+            [10, 10.5, 10, 10, 10.5, 10.6],
+            [10, 10.5, 10, 10, 10.5, 10.4]]).T
+        self.cats3 = [0, 0, 0, 1, 1, 1]
+
+        # Real valued data with 3 groupings
+        D, L = 40, 120
+        np.random.seed(0)
+        self.table4 = np.vstack((np.concatenate((normal(10, 1, D),
+                                                 normal(200, 1, D),
+                                                 normal(400, 1, D))),
+                                 np.concatenate((normal(20, 1, D),
+                                                 normal(100000, 1, D),
+                                                 normal(2000, 1, D))),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L),
+                                 np.concatenate((normal(20, 1, D),
+                                                 normal(100000, 1, D),
+                                                 normal(2000, 1, D))),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L),
+                                 normal(10, 1, L)))
+        self.table4 = np.absolute(self.table4)
+        self.table4 = self.table4.astype(np.int).T
+        self.cats4 = np.array([0]*D + [1]*D + [2]*D)
 
         # Bad datasets
         self.bad1 = np.array([1, 2, -1])
@@ -96,15 +136,6 @@ class CompositionTests(TestCase):
             [10, 10, 10, 10, 10, 10],
             [10, 10, 10, 10, 10, -1],
             [10, 10, 10, 10, 10, 10]]).T
-
-        self.bad5 = np.array([[
-            [10, 10, 10, 20, 20, 1],
-            [11, 11, 11, 21, 21, 21],
-            [10, 10, 10, 10, 10, 10],
-            [10, 10, 10, 10, 10, 10],
-            [10, 10, 10, 10, 10, 10],
-            [10, 10, 10, 10, 10, -1],
-            [10, 10, 10, 10, 10, 10]]]).T
 
     def test_closure(self):
 
@@ -292,7 +323,6 @@ class CompositionTests(TestCase):
 
     def test_clr_inv(self):
         npt.assert_allclose(clr_inv(self.rdata1), self.ortho1)
-
         npt.assert_allclose(clr(clr_inv(self.rdata1)), self.rdata1)
 
         # make sure that inplace modification is not occurring
@@ -325,64 +355,119 @@ class CompositionTests(TestCase):
                             np.array([[2, 2, 6],
                                       [4, 4, 2]]))
 
-    def test_ancom(self):
-        W, reject = ancom(pd.DataFrame(self.table1),
-                          pd.Series(self.cats1),
-                          multicorr=False)
-        npt.assert_allclose(W.values,
-                            np.array([6, 6, 2, 2, 2, 2, 2]))
-        npt.assert_allclose(reject.values,
+    def test_ancom_basic_counts(self):
+        test_table = pd.DataFrame(self.table1)
+        original_table = copy.deepcopy(test_table)
+        result1 = ancom(test_table,
+                        pd.Series(self.cats1),
+                        multiple_comparisons_correction=None)
+        W1, reject1 = result1['W'],  result1['reject']
+        # Test to make sure that the input table hasn't be altered
+        npt.assert_allclose(original_table, test_table)
+        npt.assert_allclose(W1.values,
+                            np.array([5, 5, 2, 2, 2, 2, 2]))
+        npt.assert_allclose(reject1.values,
                             np.array([True, True, False, False,
                                       False, False, False], dtype=bool))
-        W, reject = ancom(self.table1, self.cats1, multicorr=False)
-        npt.assert_allclose(W.values,
-                            np.array([6, 6, 2, 2, 2, 2, 2]))
-        npt.assert_allclose(reject.values,
+
+    def test_ancom_basic_proportions(self):
+        # Converts from counts to proportions
+        test_table = closure(self.table1)
+        original_table = copy.deepcopy(test_table)
+        result2 = ancom(test_table,
+                        self.cats1,
+                        multiple_comparisons_correction=None)
+        W2, reject2 = result2['W'],  result2['reject']
+        # Test to make sure that the input table hasn't be altered
+        npt.assert_allclose(original_table, test_table)
+        npt.assert_allclose(W2.values,
+                            np.array([5, 5, 2, 2, 2, 2, 2]))
+        npt.assert_allclose(reject2.values,
                             np.array([True, True, False, False,
                                       False, False, False], dtype=bool))
 
-        W, reject = ancom(self.table1,
-                          self.cats1,
-                          multicorr=True,
-                          func=scipy.stats.mannwhitneyu)
-        npt.assert_allclose(W.values,
-                            np.array([0, 0, 0, 0, 0, 0, 0]))
-        npt.assert_allclose(reject.values,
-                            np.array([False]*7, dtype=bool))
+    def test_ancom_anova(self):
+        result = ancom(self.table4, self.cats4,
+                       significance_test=f_oneway,
+                       multiple_comparisons_correction=None)
+        exp = pd.DataFrame({'W': np.array([8, 7, 3, 3, 7, 3, 3, 3, 3]),
+                            'reject': np.array([True, True, False, False,
+                                                True, False, False,
+                                                False, False],
+                                               dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
 
-        W, reject = ancom(self.table1,
-                          self.cats1,
-                          multicorr=False,
-                          func=scipy.stats.mannwhitneyu)
-        npt.assert_allclose(W.values,
-                            np.array([6, 6, 2, 2, 2, 2, 2]))
-        npt.assert_allclose(reject.values,
-                            np.array([True,  True, False, False,
-                                      False, False, False], dtype=bool))
+    def test_ancom_array_like(self):
+        result = ancom(self.table1, self.cats1,
+                       multiple_comparisons_correction=None)
+        exp = pd.DataFrame({'W': np.array([5, 5, 2, 2, 2, 2, 2]),
+                            'reject': np.array([True, True, False, False,
+                                                False, False, False],
+                                               dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
 
-        W, reject = ancom(self.table2,
-                          self.cats2,
-                          multicorr=False,
-                          func=scipy.stats.mannwhitneyu)
+    def test_ancom_multiple_comparisons(self):
+        result = ancom(self.table1,
+                       self.cats1,
+                       multiple_comparisons_correction='holm-bonferroni',
+                       significance_test=scipy.stats.mannwhitneyu)
+        exp = pd.DataFrame({'W': np.array([0]*7),
+                            'reject': np.array([False]*7, dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
 
-        npt.assert_allclose(W.values,
-                            np.array([8, 8, 3, 3,
-                                      8, 3, 3, 3, 3]))
-        npt.assert_allclose(reject.values,
-                            np.array([True, True, False, False,
-                                      True, False, False, False, False],
-                                     dtype=bool))
+    def test_ancom_alternative_test(self):
+        result = ancom(self.table1,
+                       self.cats1,
+                       multiple_comparisons_correction=None,
+                       significance_test=scipy.stats.mannwhitneyu)
+        exp = pd.DataFrame({'W': np.array([6, 6, 2, 2, 2, 2, 2]),
+                            'reject': np.array([True,  True, False, False,
+                                                False, False, False],
+                                               dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
 
+    def test_ancom_normal_data(self):
+        result = ancom(self.table2,
+                       self.cats2,
+                       multiple_comparisons_correction=None,
+                       significance_test=scipy.stats.mannwhitneyu)
+        exp = pd.DataFrame({'W': np.array([8, 8, 3, 3,
+                                           8, 3, 3, 3, 3]),
+                            'reject': np.array([True, True, False, False,
+                                                True, False, False,
+                                                False, False],
+                                               dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
+
+    def test_ancom_no_signal(self):
+        result = ancom(self.table3,
+                       self.cats3,
+                       multiple_comparisons_correction=None)
+        exp = pd.DataFrame({'W': np.array([0]*7),
+                            'reject': np.array([False]*7, dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
+
+    def test_ancom_fail_zeros(self):
         with self.assertRaises(ValueError):
-            ancom(self.bad3, self.cats2, multicorr=False)
+            ancom(self.bad3, self.cats2, multiple_comparisons_correction=None)
 
+    def test_ancom_fail_negative(self):
         with self.assertRaises(ValueError):
-            ancom(self.bad4, self.cats2, multicorr=False)
+            ancom(self.bad4, self.cats2, multiple_comparisons_correction=None)
 
-    def test_holm(self):
+    def test_ancom_fail_not_implemented_multiple_comparisons_correction(self):
+        with self.assertRaises(ValueError):
+            ancom(self.table2, self.cats2,
+                  multiple_comparisons_correction='fdr')
+
+    def test_check_composition_value_error(self):
+        with self.assertRaises(ValueError):
+            _check_composition(np.array([[[1, 2, 3]]]))
+
+    def test_holm_bonferroni(self):
         p = [0.005, 0.011, 0.02, 0.04, 0.13]
         corrected_p = p * np.arange(1, 6)[::-1]
-        guessed_p = _holm(p)
+        guessed_p = _holm_bonferroni(p)
         for a, b in zip(corrected_p, guessed_p):
             self.assertAlmostEqual(a, b)
 
