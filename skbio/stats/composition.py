@@ -657,7 +657,8 @@ def ancom(table, grouping,
        Lower bound for the proportion of differential features.
        This can can be anywhere between 0 and 1.
     multiple_comparisons_correction : {None, 'holm-bonferroni'}, optional
-       The multiple comparison correction procedure to run
+       The multiple comparison correction procedure to run.  By default
+       `scipy.stats.f_oneway` is used.
     significance_test : function, optional
        A statistical signficance function to test for signficance between
        classes.
@@ -760,7 +761,7 @@ def ancom(table, grouping,
                              % multiple_comparisons_correction)
 
     if significance_test is None:
-        significance_test = scipy.stats.ttest_ind
+        significance_test = scipy.stats.f_oneway
 
     mat = _check_composition(table, ignore_zeros=False)
     cats = pd.Series(grouping)
