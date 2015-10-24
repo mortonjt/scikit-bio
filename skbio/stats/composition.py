@@ -625,7 +625,7 @@ def ancom(table, grouping,
     r""" Performs a differential abundance test using ANCOM
 
     This is done by calculating pairwise log ratios between all features
-    and performing a signficance test to determine if there is a significant
+    and performing a significance test to determine if there is a significant
     difference in feature ratios with respect to the variable of interest.
 
     In an experiment with only two treatments, this test tests the following
@@ -639,9 +639,6 @@ def ancom(table, grouping,
     first group and :math:`u_i^{(2)}` is the mean abundance for feature
     :math:`i` in the second group.
 
-    This method can be extended to an arbitrary number of classes by passing
-    in a different statistical function.
-
     Parameters
     ----------
     table : pd.DataFrame
@@ -652,15 +649,17 @@ def ancom(table, grouping,
     alpha : float, optional
        Significance level for each of the statistical tests
     tau : float, optional
-       A constant used to determine an appropriate cutoff
+       A constant used to determine an appropriate cutoff.
+       A value close to zero indicates a conservative cutoff
+       This can can be anywhere between 0 and 1 exclusive.
     theta : float, optional
        Lower bound for the proportion of differential features.
-       This can can be anywhere between 0 and 1.
+       This can can be anywhere between 0 and 1 exclusive.
     multiple_comparisons_correction : {None, 'holm-bonferroni'}, optional
        The multiple comparison correction procedure to run.  By default
        `scipy.stats.f_oneway` is used.
     significance_test : function, optional
-       A statistical signficance function to test for signficance between
+       A statistical significance function to test for significance between
        classes.
 
     Returns
@@ -677,13 +676,30 @@ def ancom(table, grouping,
     See Also
     --------
     multiplicative_replacement
+    scipy.stats.ttest_ind
+    scipy.stats.f_oneway
+    scipy.stats.wilcoxon
+    scipy.stats.kruskal
 
     Notes
     -----
+    The developers of this method recommend the following significance tests
+    ([1]_, Supplementary File 1, top of page 11): the standard parametric
+    t-test (``scipy.stats.ttest_ind``) or one-way ANOVA
+    (``scipy.stats.f_oneway``) if the number of groups is greater
+    than 2, or  non-parametric variants such as Wilcoxon rank sum
+    (``scipy.stats.wilcoxon``) or Kruskal-Wallis (``scipy.stats.kruskal``)
+    if the number of groups is greater than 2. Because one-way ANOVA is
+    equivalent to the standard t-test when the number of groups is two,
+    we default to ``scipy.stats.f_oneway`` here, which can be used when
+    there are two or more groups. Users should refer to the documentation
+    of these tests in SciPy to understand the assumptions made by each test.
+
     This method cannot handle any zero counts as input, since the logarithm
     of zero cannot be computed.  While this is an unsolved problem, many
     studies have shown promising results by replacing the zeros with pseudo
-    counts.
+    counts.  This can be also be done via the multiplicative_replacement method
+
 
     References
     ----------
@@ -698,45 +714,48 @@ def ancom(table, grouping,
     >>> from skbio.stats.composition import ancom
     >>> import pandas as pd
 
-    Now let's load in a pd.DataFrame with sample and feature ids
-    for our data matrix:
+    Now let's load in a pd.DataFrame a count matrix with 6 samples
+    and 7 unknown bacteria:
 
-    >>> table = pd.DataFrame([[10., 11., 10., 10., 10., 10., 10.],
-    ...                       [10.5, 11.5, 10.5, 10.5, 10.5, 10.5, 10.5],
-    ...                       [10., 11., 10., 10., 10., 10., 10.],
-    ...                       [20., 21., 10., 10., 10., 10., 10.],
-    ...                       [20.5, 21.5, 10.5, 10.5, 10.5, 10.5, 10.5],
-    ...                       [20.3, 21.3, 10.2, 10.3, 10.1, 10.6, 10.4]],
+    >>> table = pd.DataFrame([[12, 11, 10, 10, 10, 10, 10],
+    ...                       [9,  11, 12, 10, 10, 10, 10],
+    ...                       [1,  11, 10, 11, 10, 5,  9],
+    ...                       [22, 21, 9,  10, 10, 10, 10],
+    ...                       [20, 22, 10, 10, 13, 10, 10],
+    ...                       [23, 21, 14, 10, 10, 10, 10]],
     ...                      index=['s1','s2','s3','s4','s5','s6'],
     ...                      columns=['b1','b2','b3','b4','b5','b6','b7'])
 
     Then create a grouping vector.  In this scenario, there
-    are only two classes, so the first three samples fall under the first
-    class while the last three samples fall under the second class:
+    are only two classes, and suppose these classes correspond the
+    treatment due to a drug and a control.  The first three samples
+    are controls and the last three samples are treatments.
 
     >>> grouping = pd.Series([0, 0, 0, 1, 1, 1],
     ...                      index=['s1','s2','s3','s4','s5','s6'])
 
     Now run `ancom` and see if there are any features that have any
-    significant differences:
+    significant differences between the treatment and the control.
 
     >>> results = ancom(table, grouping)
     >>> results['W']
-    b1    6
-    b2    6
-    b3    2
-    b4    2
-    b5    2
-    b6    2
-    b7    2
+    b1    0
+    b2    4
+    b3    1
+    b4    1
+    b5    1
+    b6    0
+    b7    1
     Name: W, dtype: int64
 
-    The W-statistic is the number of features that a single feature is
-    tested to be significantly different against.  In this scenario
-    there are b1 was significantly different from all of the other features:
+    The W-statistic is the number of features that a single feature is tested
+    to be significantly different against. In this scenario, b2 was detected to
+    have significantly different abundances compared four of the other species.
+    To summarize the results from the W-statistic, let's take a look and the
+    results from the hypothesis test:
 
     >>> results['reject']
-    b1     True
+    b1    False
     b2     True
     b3    False
     b4    False
@@ -745,19 +764,28 @@ def ancom(table, grouping,
     b7    False
     Name: reject, dtype: bool
 
-    Here, there were only two features that estimated to
-    significantly change between the two groups.
+    From this we can conclude that only b2 was significantly
+    different between the treatment and the control.
 
     """
     if len(table) != len(grouping):
-        raise ValueError('The number of samples in table must be equal '
-                         '(%d samples) to the number of samples in '
-                         'grouping (%d samples).' % (len(table),
-                                                     len(grouping)))
+        raise ValueError('The number of samples in `table` (%d) '
+                         'must be equal to the number of samples in '
+                         '`grouping` (%d).' % (len(table),
+                                               len(grouping)))
+    if not 0 < alpha < 1:
+        raise ValueError('alpha=%f is not within 0 and 1' % alpha)
+
+    if not 0 < tau < 1:
+        raise ValueError('tau=%f is not within 0 and 1' % alpha)
+
+    if not 0 < theta < 1:
+        raise ValueError('theta=%f is not within 0 and 1' % alpha)
 
     if multiple_comparisons_correction is not None:
         if multiple_comparisons_correction != 'holm-bonferroni':
-            raise ValueError('%s is not an available option'
+            raise ValueError('%s is not an option for '
+                             '`multiple_comparisons_correction`'
                              % multiple_comparisons_correction)
 
     if significance_test is None:

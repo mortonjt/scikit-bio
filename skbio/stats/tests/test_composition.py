@@ -358,33 +358,33 @@ class CompositionTests(TestCase):
     def test_ancom_basic_counts(self):
         test_table = pd.DataFrame(self.table1)
         original_table = copy.deepcopy(test_table)
-        result1 = ancom(test_table,
-                        pd.Series(self.cats1),
-                        multiple_comparisons_correction=None)
-        W1, reject1 = result1['W'],  result1['reject']
+        result = ancom(test_table,
+                       pd.Series(self.cats1),
+                       multiple_comparisons_correction=None)
+
         # Test to make sure that the input table hasn't be altered
         npt.assert_allclose(original_table, test_table)
-        npt.assert_allclose(W1.values,
-                            np.array([5, 5, 2, 2, 2, 2, 2]))
-        npt.assert_allclose(reject1.values,
-                            np.array([True, True, False, False,
-                                      False, False, False], dtype=bool))
+        exp = pd.DataFrame({'W': np.array([5, 5, 2, 2, 2, 2, 2]),
+                            'reject': np.array([True, True, False, False,
+                                                False, False, False],
+                                                dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
+
 
     def test_ancom_basic_proportions(self):
         # Converts from counts to proportions
         test_table = closure(self.table1)
         original_table = copy.deepcopy(test_table)
-        result2 = ancom(test_table,
-                        self.cats1,
-                        multiple_comparisons_correction=None)
-        W2, reject2 = result2['W'],  result2['reject']
+        result = ancom(test_table,
+                       self.cats1,
+                       multiple_comparisons_correction=None)
         # Test to make sure that the input table hasn't be altered
         npt.assert_allclose(original_table, test_table)
-        npt.assert_allclose(W2.values,
-                            np.array([5, 5, 2, 2, 2, 2, 2]))
-        npt.assert_allclose(reject2.values,
-                            np.array([True, True, False, False,
-                                      False, False, False], dtype=bool))
+        exp = pd.DataFrame({'W': np.array([5, 5, 2, 2, 2, 2, 2]),
+                            'reject': np.array([True, True, False, False,
+                                                False, False, False],
+                                                dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
 
     def test_ancom_anova(self):
         result = ancom(self.table4, self.cats4,
@@ -446,6 +446,22 @@ class CompositionTests(TestCase):
         exp = pd.DataFrame({'W': np.array([0]*7),
                             'reject': np.array([False]*7, dtype=bool)})
         assert_data_frame_almost_equal(result, exp)
+
+
+    def test_ancom_fail_alpha(self):
+        with self.assertRaises(ValueError):
+            ancom(self.bad3, self.cats2, multiple_comparisons_correction=None,
+                  alpha=-1)
+
+    def test_ancom_fail_tau(self):
+        with self.assertRaises(ValueError):
+            ancom(self.bad3, self.cats2, multiple_comparisons_correction=None,
+                  tau=-1)
+
+    def test_ancom_fail_theta(self):
+        with self.assertRaises(ValueError):
+            ancom(self.bad3, self.cats2, multiple_comparisons_correction=None,
+                  theta=-1)
 
     def test_ancom_fail_zeros(self):
         with self.assertRaises(ValueError):
