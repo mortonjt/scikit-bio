@@ -653,7 +653,9 @@ def ancom(table, grouping,
        A value close to zero indicates a conservative cutoff
        This can can be anywhere between 0 and 1 exclusive.
     theta : float, optional
-       Lower bound for the proportion of differential features.
+       Lower bound for the proportion for the W-statistic.
+       If all W-statistics are lower than theta, then no features
+       will be detected to be differientially significant
        This can can be anywhere between 0 and 1 exclusive.
     multiple_comparisons_correction : {None, 'holm-bonferroni'}, optional
        The multiple comparison correction procedure to run.  By default
