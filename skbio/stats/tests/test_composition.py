@@ -367,9 +367,8 @@ class CompositionTests(TestCase):
         exp = pd.DataFrame({'W': np.array([5, 5, 2, 2, 2, 2, 2]),
                             'reject': np.array([True, True, False, False,
                                                 False, False, False],
-                                                dtype=bool)})
+                                               dtype=bool)})
         assert_data_frame_almost_equal(result, exp)
-
 
     def test_ancom_basic_proportions(self):
         # Converts from counts to proportions
@@ -383,7 +382,7 @@ class CompositionTests(TestCase):
         exp = pd.DataFrame({'W': np.array([5, 5, 2, 2, 2, 2, 2]),
                             'reject': np.array([True, True, False, False,
                                                 False, False, False],
-                                                dtype=bool)})
+                                               dtype=bool)})
         assert_data_frame_almost_equal(result, exp)
 
     def test_ancom_anova(self):
@@ -446,7 +445,6 @@ class CompositionTests(TestCase):
         exp = pd.DataFrame({'W': np.array([0]*7),
                             'reject': np.array([False]*7, dtype=bool)})
         assert_data_frame_almost_equal(result, exp)
-
 
     def test_ancom_fail_alpha(self):
         with self.assertRaises(ValueError):
