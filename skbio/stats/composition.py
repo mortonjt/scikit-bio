@@ -103,6 +103,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
 import scipy.stats
+import copy
 from skbio.util._decorator import experimental
 
 
@@ -643,19 +644,19 @@ def ancom(table, grouping,
     ----------
     table : pd.DataFrame
        A 2D matrix of counts or proportions where the rows correspond to
-       samples and the columns correspond to features
+       samples and the columns correspond to features.
     grouping : pd.Series
        Vector of group categories
     alpha : float, optional
        Significance level for each of the statistical tests
     tau : float, optional
        A constant used to determine an appropriate cutoff.
-       A value close to zero indicates a conservative cutoff
+       A value close to zero indicates a conservative cutoff.
        This can can be anywhere between 0 and 1 exclusive.
     theta : float, optional
        Lower bound for the proportion for the W-statistic.
        If all W-statistics are lower than theta, then no features
-       will be detected to be differientially significant
+       will be detected to be differentially significant.
        This can can be anywhere between 0 and 1 exclusive.
     multiple_comparisons_correction : {None, 'holm-bonferroni'}, optional
        The multiple comparison correction procedure to run.  By default
@@ -790,9 +791,6 @@ def ancom(table, grouping,
                              '`multiple_comparisons_correction`'
                              % multiple_comparisons_correction)
 
-    if significance_test is None:
-        significance_test = scipy.stats.f_oneway
-
     mat = _check_composition(table, ignore_zeros=False)
     cats = pd.Series(grouping)
 
@@ -802,7 +800,12 @@ def ancom(table, grouping,
 
     n_samp, n_feat = mat.shape
 
-    _logratio_mat = _log_compare(mat.values, cats.values, significance_test)
+    if significance_test is None:
+        significance_test = scipy.stats.f_oneway
+    if significance_test == 'mean-fisher':
+        _logratio_mat = _fisher_log_compare(mat.values, cats.values)
+    else:
+        _logratio_mat = _log_compare(mat.values, cats.values, significance_test)
     logratio_mat = _logratio_mat + _logratio_mat.T
 
     # Multiple comparisons
@@ -932,6 +935,111 @@ def _log_compare(mat, cats,
                                    arr=ratio)
         log_ratio[i, i+1:] = np.squeeze(np.array(p.T))
     return log_ratio
+
+
+def _fisher_log_compare(mat,cats,permutations=1000):
+    """ Fisher permutation test on log ratios
+
+    Calculates pairwise log ratios between all features
+    and performs a permutation tests to determine if there is a
+    significant difference in feature ratios with respect to the
+    variable of interest
+
+    This is an optimized version to minimize data transfer
+    between the CPU and GPU.  Assumes a stationary set of permutations
+
+    mat: np.array
+       numpy 2d matrix.  Rows correspond to samples and
+       columns correspond to features
+    cats: numpy array float32
+       vector of categories
+
+    Returns:
+    --------
+    log ratio: numpy.ndarray
+        pvalue matrix
+    """
+    r, c = mat.shape
+    log_mat = np.log(mat+(1./r)).T
+    log_ratio = np.zeros((r, r),dtype=mat.dtype)
+    perms = _categorical_perms(cats, permutations)
+    perms = perms.astype(mat.dtype)
+    _ones = np.matrix(np.ones(r-1,dtype=mat.dtype)).transpose()
+    for i in range(r-1):
+        ## Perform outer product to create copies of log_mat[i,:]
+        ## similar to np.tile
+        ratio =  log_mat[i+1:, :] - log_mat[i, :]
+        m, p  = _fisher_mean_test(ratio, perms)
+        log_ratio[i,i+1:] = p.T
+    return log_ratio
+
+
+def _fisher_mean_test(mat, perms, num_cats=2):
+    """
+    Calculates a permutative mean statistic just looking at binary classes
+
+    mat : numpy.ndarray or scipy.sparse.*
+        columns: features (e.g. OTUs)
+        Rows correspond to samples and columns correspond to features
+    perms : numpy.ndarray
+        columns correspond to permutations of samples and rows
+        correspond to features.  This is also known as the permutation
+        matrix
+    num_cats : int
+        number of group categroies
+
+    Returns
+    =======
+    test_stats: np.array
+        Vector of mean test statistics
+    pvalues: np.array
+        Vector of corrected p-values
+
+    This module will conduct a mean permutation test using
+    numpy matrix algebra
+    """
+
+    ## Create a permutation matrix
+    n_otus, c = perms.shape
+    permutations = (c-num_cats) / num_cats
+
+    ## Perform matrix multiplication on data matrix
+    ## and calculate averages
+    tot = mat.dot(perms)
+    avgs = tot / tot.sum(axis=0)
+    ## Calculate the mean statistic
+    idx = np.arange(0, (permutations)*num_cats, num_cats).astype(np.int)
+    mean_stat = abs(avgs[:, idx+1] - avgs[:, idx])
+
+    ## Calculate the p-values
+    cmps =  np.apply_along_axis(lambda x, y: x <= y,
+        1, mean_stat[:, 1:], y=mean_stat[:, 0])
+    pvalues = (cmps.sum(axis=1) + 1.) / (permutations + 1.)
+    test_stats = np.array(mean_stat[:, 0])
+    pvalues = np.array(pvalues)
+    return test_stats, pvalues
+
+
+def _categorical_perms(cats, permutations=1000):
+    """
+    Creates a reciprocal permutation matrix
+
+    cats: numpy.array
+       List of binary class assignments
+    permutations: int
+       Number of permutations for permutation test
+
+    Note: This can only handle binary classes now
+    """
+    c = len(cats)
+    num_cats = len(np.unique(cats)) # Number of distinct categories
+    copy_cats = copy.deepcopy(cats)
+    perms = np.array(np.zeros((c, num_cats*(permutations+1)), dtype=cats.dtype))
+    for m in np.arange(permutations+1):
+        for i in np.arange(num_cats):
+            perms[:,num_cats*m+i] = (copy_cats == i).astype(cats.dtype)
+        np.random.shuffle(copy_cats)
+    return perms
 
 
 def _gram_schmidt_basis(n):

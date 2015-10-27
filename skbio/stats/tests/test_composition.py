@@ -396,6 +396,17 @@ class CompositionTests(TestCase):
                                                dtype=bool)})
         assert_data_frame_almost_equal(result, exp)
 
+    def test_ancom_fisher(self):
+        result = ancom(self.table4, self.cats4,
+                       significance_test='mean-fisher',
+                       multiple_comparisons_correction=None)
+        exp = pd.DataFrame({'W': np.array([8, 7, 3, 3, 7, 3, 3, 3, 3]),
+                            'reject': np.array([True, True, False, False,
+                                                True, False, False,
+                                                False, False],
+                                               dtype=bool)})
+        assert_data_frame_almost_equal(result, exp)
+
     def test_ancom_array_like(self):
         result = ancom(self.table1, self.cats1,
                        multiple_comparisons_correction=None)
