@@ -104,7 +104,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 from skbio.util._decorator import experimental
-from skbio.stats.distance import DissimilarityMatrix
 
 @experimental(as_of="0.4.0")
 def closure(mat):
@@ -627,7 +626,7 @@ def lovell(X, method='one-sided'):
 
     Returns
     -------
-    skbio.DissimiliarityMatrix
+    pd.DataFrame
     """
     mat = clr(X)
     r, c = mat.shape
@@ -641,7 +640,7 @@ def lovell(X, method='one-sided'):
     for i in range(c):
         for j in range(c):
             corr_mat[i, j] = func(mat[:, i], mat[:, j])
-    return DissimilarityMatrix(corr_mat, X.columns)
+    return pd.DataFrame(corr_mat, index=X.columns, columns=X.columns)
 
 
 def _onesided_lovell(x, y):
