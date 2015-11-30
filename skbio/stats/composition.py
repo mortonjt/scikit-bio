@@ -614,6 +614,67 @@ def centralize(mat):
     cen = scipy.stats.gmean(mat, axis=0)
     return perturb_inv(mat, cen)
 
+@experimental(as_of="0.4.0-dev")
+def lovell(X, method='one-sided'):
+    """
+    Calculates Lovell's coefficient of proportionality
+
+    Parameters
+    ----------
+    X : pd.DataFrame
+       Contigency table where samples are rows and features are
+       columns (i.e. OTUs)
+
+    Returns
+    -------
+    skbio.DissimiliarityMatrix
+    """
+    mat = clr(X)
+    r, c = mat.shape
+    corr_mat = np.zeros((c, c))
+    if method=='one-sided':
+        func = _onesided_lovell
+    elif method=='two-sided':
+        func = _twosided_lovell
+    else:
+        raise ValueError('`method` is not a valid option.')
+    for i in range(c):
+        for j in range(c):
+            corr_mat[i, j] = func(mat[:, i], mat[:, j])
+    return DissimiliartyMatrix(corr_mat, X.columns)
+
+
+def _onesided_lovell(x, y):
+    """
+    Calculates proportional goodness of fit
+
+    Parameters
+    ----------
+    x : array_like
+    y : array_like
+
+    Returns
+    -------
+    float : proportional goodness of fit
+    """
+    return np.var(x - y) / np.var(x)
+
+
+def _twosided_lovell(x, y):
+    """
+    Calculates proportional goodness of fit
+
+    Parameters
+    ----------
+    x : array_like
+    y : array_like
+
+    Returns
+    -------
+    float : proportional goodness of fit
+    """
+    return 2*np.cov(x, y)[1, 0] / (np.var(x) + np.var(y))
+
 
 @experimental(as_of="0.4.0-dev")
 def ancom(table, grouping,
