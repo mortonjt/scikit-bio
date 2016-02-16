@@ -762,10 +762,20 @@ class Sequence(MetadataMixin, PositionalMetadataMixin, IntervalMetadataMixin,
         return not (self == other)
 
     @experimental(as_of="0.4.1")
-    def __setitem__(self, feat):
+    def __setitem__(self, indexable, **kwargs):
         """ Set the metadata
 
+        indexable : skbio.sequence.Feature
+           The feature to index by.
+        kwargs : dict
+           Keyword arguments to update
         """
+        if not isinstance(indexable, Featue):
+            raise IndexError("Cannot index with %s type: %r" %
+                             (type(indexable).__name__, indexable))
+        for k, v in kwargs.items():
+            self.feature_metadata.features[indexable]
+
         pass
 
     @stable(as_of="0.4.0")
@@ -892,7 +902,7 @@ class Sequence(MetadataMixin, PositionalMetadataMixin, IntervalMetadataMixin,
         return self._to(sequence=seq, positional_metadata=positional_metadata)
 
     def _slice_interval_metadata(self, indexable):
-        # Slices both intervals and features
+        # TODO: Slices both intervals and features
         pass
 
     def _slice_positional_metadata(self, indexable):
