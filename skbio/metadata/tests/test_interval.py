@@ -105,10 +105,14 @@ class TestIntervalMetadata(unittest.TestCase):
         self.assertEqual(st, 1)
         self.assertEqual(end, 2)
 
+    def test_build_tree(self):
+
+        pass
+
     def test_add(self):
         im = IntervalMetadata()
         im.add(intervals=[(1, 2), (4, 7)],
-               metadata={'gene':'sagA', 'location':0})
+               metadata={'gene':'sagA',  'location':0})
 
         self.assertEqual(im._metadata[0].intervals,
                          [(1, 2), (4, 7)])
@@ -124,11 +128,11 @@ class TestIntervalMetadata(unittest.TestCase):
         im.add(intervals=[(0, 2), (4, 7)], metadata={'gene': 'sagA', 'location': 0})
         im.add(intervals=[(3, 5)], metadata={'gene': 'sagB', 'location': 0})
 
-        feats = im.query((1, 2))
+        feats = im.query(intervals=[(1, 2)])
         self.assertEqual(len(feats), 1)
         self.assertEqual(feats[0].metadata, {'gene': 'sagA', 'location': 0})
 
-        feats = im.query(gene='sagB')
+        feats = im.query(metadata={'gene':'sagB'})
         self.assertEqual(len(feats), 1)
         self.assertEqual(feats[0].metadata, {'gene': 'sagB', 'location': 0})
         self.assertEqual(feats[0].intervals, [(3, 5)])
@@ -138,7 +142,7 @@ class TestIntervalMetadata(unittest.TestCase):
         im.add(metadata={'gene':'sagA', 'location':0}, intervals=[(0, 2), (4, 7)])
         im.add(metadata={'gene':'sagB', 'location':0}, intervals=[(3, 5)])
 
-        feats = im.query((1, 5))
+        feats = im.query(intervals=[(1, 5)])
         self.assertEqual(len(feats), 3)
         self.assertEqual(feats[0].metadata, {'gene': 'sagA', 'location': 0})
         self.assertEqual(feats[0].intervals, [(0, 2), (4, 7)])
@@ -146,6 +150,21 @@ class TestIntervalMetadata(unittest.TestCase):
         self.assertEqual(feats[1].intervals, [(3, 5)])
         self.assertEqual(feats[2].metadata, {'gene': 'sagA', 'location': 0})
         self.assertEqual(feats[2].intervals, [(0, 2), (4, 7)])
+
+    def test_query_stale_tree(self):
+        pass
+
+    def test_drop(self):
+        interval_metadata = IntervalMetadata()
+        interval_metadata.add(intervals=[(0, 2), (4, 7)],
+                              boundaries=None, metadata={'name':'sagA'})
+        interval_metadata.add(intervals=[(40, 70)],
+                              boundaries=None, metadata={'name':'sagA'})
+        interval_metadata.add(intervals=[(3, 4)],
+                              boundaries=None, metadata={'name':'sagB'})
+        interval_metadata.drop(metadata={'name':'sagA'})
+        feats = list(interval_metadata.query(intervals=[(1, 2)]))
+        self.assertEqual(len(feats), 0)
 
 #     def test_reverse_complement(self):
 #         interval_metadata = IntervalMetadata()

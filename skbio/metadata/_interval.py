@@ -54,6 +54,14 @@ class Interval():
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
+    def __repr__(self):
+        return ''.join([
+            "Interval("
+            "intervals=" + str(self.intervals),
+            ", metadata=" + str(self.metadata),
+            ")"])
+
     @property
     def intervals(self):
         return self._intervals
@@ -71,7 +79,7 @@ class IntervalMetadata():
         self._intervals = IntervalTree()
         self._is_stale_tree = False
 
-    def reverse_complement(self, length):
+    def _reverse(self, length):
         """ Reverse complements IntervalMetadata object.
 
         Parameters
@@ -79,10 +87,6 @@ class IntervalMetadata():
         length : int
             Largest end coordinate to perform reverse complement.
             This typically corresponds to the length of sequence.
-
-        Returns
-        -------
-        IntervalMetadata
         """
         rvs_features = {}
         for k, v in self.features.items():
@@ -107,12 +111,22 @@ class IntervalMetadata():
                           boundaries=boundaries,
                           metadata=metadata)
 
+        # Add directly to the tree
         for loc in inv_md.intervals:
             if loc is not None:
                 start, end = loc
                 self._intervals.add(start, end, inv_md)
 
         self._metadata.append(inv_md)
+
+
+    def _rebuild_tree(self, intervals):
+        self._intervals = IntervalTree()
+        for f in intervals:
+            for inv in f.intervals:
+                start, end = inv
+                self._intervals.add(start, end, f)
+
 
     def _query_interval(self, interval):
         start, end = _polish_interval(interval)
@@ -126,7 +140,7 @@ class IntervalMetadata():
                 queries.append(inv)
         return queries
 
-    def query(self, *args, **kwargs):
+    def query(self, intervals=None, boundaries=None, metadata=None):
         """ Looks up features that with intervals and keywords.
 
         Parameters
@@ -150,29 +164,48 @@ class IntervalMetadata():
         list, Feature
             A list of features satisfying the search criteria.
         """
+        if self._is_stale_tree:
+            self._rebuild_tree(self._metadata)
+            self._is_stale_tree = False
+
         invs = []
 
         # Find queries by interval
-        for value in args:
-            invs += self._query_interval(value)
+        if intervals is not None:
+            for value in intervals:
+                invs += self._query_interval(value)
 
         # Find queries by feature attribute
-        for (key, value) in kwargs.items():
-            invs += self._query_attribute(key, value)
-
+        if metadata is not None:
+            for (key, value) in metadata.items():
+                invs += self._query_attribute(key, value)
         return invs
 
+    def drop(self, intervals=None, boundaries=None, metadata=None):
+        """ DOC TODO """
+        if intervals is None:
+            intervals = []
+        if metadata is None:
+            metadata = {}
+
+        queried_invs = self.query(intervals=intervals,
+                                  boundaries=boundaries,
+                                  metadata=metadata)
+        new_invs = []
+        # iterate through queries and drop them
+        # TODO: Not sure if this is correct
+        for inv in self._metadata:
+            if inv not in queried_invs:
+                new_invs.append(inv)
+        self._metadata = new_invs
+        self._is_stale_tree = True
+
     def __eq__(self, other):
+        """ TODO """
         # This doesn't look at the interval trees,
         # since the interval trees are strictly built
         # based on the features.
-        sivs = list(map(sorted, self.features.values()))
-        oivs = list(map(sorted, other.features.values()))
-
-        equalIntervals = sorted(sivs) == sorted(oivs)
-        equalFeatures = self.features.keys() == other.features.keys()
-
-        return equalIntervals and equalFeatures
+        pass
 
 
 def _polish_interval(interval):
