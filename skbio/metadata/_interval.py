@@ -46,6 +46,18 @@ class Interval():
     def __setitem__(self, key, val):
         self.metadata[key] = val
 
+    def __lt__(self, other):
+        return self.intervals < other.intervals
+
+    def __gt__(self, other):
+        return self.intervals > other.intervals
+
+    def __le__(self, other):
+        return self.intervals <= other.intervals
+
+    def __ge__(self, other):
+        return self.intervals >= other.intervals
+
     def __eq__(self, other):
         return ((self.metadata == other.metadata) and
                 (self.intervals == other.intervals) and
@@ -53,7 +65,6 @@ class Interval():
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
 
     def __repr__(self):
         return ''.join([
@@ -88,12 +99,11 @@ class IntervalMetadata():
             Largest end coordinate to perform reverse complement.
             This typically corresponds to the length of sequence.
         """
-        rvs_features = {}
-        for k, v in self.features.items():
-            xs = map(_polish_interval, v)
-            rvs_features[k] = list(map(lambda x: (length-x[1], length-x[0]),
-                                       xs))
-        return IntervalMetadata(rvs_features)
+        for f in self._metadata:
+            # staled doesn't need to be called, since the setter for
+            # Interval will take care of this
+            f.intervals = list(map(lambda x: (length-x[1], length-x[0]),
+                                   f.intervals))
 
     def add(self, intervals, boundaries=None, metadata=None):
         """ Adds a feature to the metadata object.
@@ -111,7 +121,7 @@ class IntervalMetadata():
                           boundaries=boundaries,
                           metadata=metadata)
 
-        # Add directly to the tree
+        # Add directly to the tree.  So no need for _is_stale_tree
         for loc in inv_md.intervals:
             if loc is not None:
                 start, end = loc
@@ -119,14 +129,12 @@ class IntervalMetadata():
 
         self._metadata.append(inv_md)
 
-
     def _rebuild_tree(self, intervals):
         self._intervals = IntervalTree()
         for f in intervals:
             for inv in f.intervals:
                 start, end = inv
                 self._intervals.add(start, end, f)
-
 
     def _query_interval(self, interval):
         start, end = _polish_interval(interval)
@@ -201,11 +209,10 @@ class IntervalMetadata():
         self._is_stale_tree = True
 
     def __eq__(self, other):
-        """ TODO """
-        # This doesn't look at the interval trees,
-        # since the interval trees are strictly built
-        # based on the features.
-        pass
+        return sorted(self._metadata) == sorted(other._metadata)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 def _polish_interval(interval):
@@ -218,6 +225,6 @@ def _polish_interval(interval):
              (not isinstance(end, int)))):
             raise ValueError("`start` and `end` aren't correctly specified")
     else:
-        raise ValueError('The args must be associated with'
+        raise ValueError('The args must be associated with '
                          'a tuple when querying')
     return start, end
