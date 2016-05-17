@@ -32,7 +32,10 @@ class Interval():
     '''
     def __init__(self, intervals=None, boundaries=None,
                  metadata=None, _interval_metadata=None):
-        self._intervals = intervals
+        self._intervals = []
+        for interval in intervals:
+            inv = _polish_interval(interval)
+            self._intervals.append(inv)
         self.boundaries = boundaries
         self.metadata = metadata
         self._interval_metadata = _interval_metadata
@@ -63,9 +66,9 @@ class Interval():
 
 class IntervalMetadata():
     def __init__(self):
-        # maps features attributes to intervals
-        self.features = {}
-        self.intervals = IntervalTree()
+        # stores metadata for each feature
+        self._metadata = []
+        self._intervals = IntervalTree()
         self._is_stale_tree = False
 
     def reverse_complement(self, length):
@@ -88,7 +91,7 @@ class IntervalMetadata():
                                        xs))
         return IntervalMetadata(rvs_features)
 
-    def add(self, feature, *intervals):
+    def add(self, intervals, boundaries=None, metadata=None):
         """ Adds a feature to the metadata object.
 
         Parameters
@@ -99,36 +102,28 @@ class IntervalMetadata():
             A list of intervals associated with the feature
 
         """
-        if not isinstance(feature, Feature):
-            raise ValueError('feature is not an instance of `Feature`')
+        inv_md = Interval(_interval_metadata=self,
+                          intervals=intervals,
+                          boundaries=boundaries,
+                          metadata=metadata)
 
-        # TODO: The below will require careful consideration
-        # since this will be using a little more memory, since the whole
-        # feature object will be stored.
-        for interval in intervals:
-            loc = _polish_interval(interval)
+        for loc in inv_md.intervals:
             if loc is not None:
                 start, end = loc
-                self.intervals.add(start, end, feature)
+                self._intervals.add(start, end, inv_md)
 
-        # TODO: The below will require careful consideration
-        # since this will be using a little more memory, since the whole
-        # feature object will be stored.
-        if feature not in self.features.keys():
-            self.features[feature] = []
-
-        self.features[feature] = list(map(_polish_interval, intervals))
+        self._metadata.append(inv_md)
 
     def _query_interval(self, interval):
         start, end = _polish_interval(interval)
-        features = self.intervals.find(start, end)
-        return features
+        invs = self._intervals.find(start, end)
+        return invs
 
-    def _query_feature(self, key, value):
+    def _query_attribute(self, key, value):
         queries = []
-        for feature in self.features.keys():
-            if feature[key] == value:
-                queries.append(feature)
+        for inv in self._metadata:
+            if inv[key] == value:
+                queries.append(inv)
         return queries
 
     def query(self, *args, **kwargs):
@@ -155,42 +150,17 @@ class IntervalMetadata():
         list, Feature
             A list of features satisfying the search criteria.
         """
-        feats = set()
+        invs = []
 
         # Find queries by interval
         for value in args:
-            feats.update(self._query_interval(value))
+            invs += self._query_interval(value)
 
         # Find queries by feature attribute
         for (key, value) in kwargs.items():
-            feats.update(self._query_feature(key, value))
+            invs += self._query_attribute(key, value)
 
-        return list(feats)
-
-    def concat(self, other, inplace=False):
-        """ Concatenates two interval metadata objects
-
-        Parameters
-        ----------
-        other : IntervalMetadata
-            An IntervalMetadata object that is being concatenated with
-            the current IntervalMetadata object.
-
-        Returns
-        -------
-        IntervalMetadata
-            Concatenated IntervalMetadata object.
-
-        Notes
-        -----
-        If the two IntervalMetadata objects contain the same features,
-        the features present in other will be used.
-        """
-        features = merge_dicts(self.features, other.features)
-        if inplace:
-            self.__init__(features=features)
-        else:
-            return IntervalMetadata(features)
+        return invs
 
     def __eq__(self, other):
         # This doesn't look at the interval trees,
@@ -214,11 +184,7 @@ def _polish_interval(interval):
             ((not isinstance(start, int)) or
              (not isinstance(end, int)))):
             raise ValueError("`start` and `end` aren't correctly specified")
-    elif isinstance(interval, Interval):
-        start, end = interval.start, interval.end
-    elif isinstance(interval, int):
-        start, end = interval, interval + 1
     else:
-        raise ValueError('The args must be associated with an `Interval` or '
+        raise ValueError('The args must be associated with'
                          'a tuple when querying')
     return start, end
