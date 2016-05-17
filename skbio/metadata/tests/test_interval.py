@@ -29,6 +29,57 @@ class TestInterval(unittest.TestCase):
         self.assertListEqual(f.boundaries, [(True, False), (False, False)])
         self.assertDictEqual(f.metadata, {'name':'sagA', 'function':'transport'})
 
+    def test_getitem(self):
+        f = Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[(1,2), (4,7)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagA', 'function':'transport'})
+        self.assertEqual(f['name'], 'sagA')
+        self.assertEqual(f['function'], 'transport')
+
+    def test_setitem(self):
+        f = Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[(1,2), (4,7)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagA', 'function':'transport'})
+        f['name'] = 'sagB'
+        self.assertEqual(f['name'], 'sagB')
+        self.assertEqual(f['function'], 'transport')
+
+    def test_equal(self):
+        f = Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[(1,2), (4,7)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagA', 'function':'transport'})
+
+        f1 = Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[(1,2), (4,7)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagA', 'function':'transport'})
+
+        f2 = Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[(1,2), (4,8)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagA', 'function':'transport'})
+
+        f3 = Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[(1,2), (4,8)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagB', 'function':'transport'})
+        self.assertEqual(f, f1)
+        self.assertNotEqual(f, f2)
+        self.assertNotEqual(f, f3)
+
+    def test_set_interval(self):
+        im = IntervalMetadata()
+        f = Interval(_interval_metadata=im,
+                     intervals=[(1,2), (4,7)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name':'sagA', 'function':'transport'})
+        f.intervals = [(1,3), (4,7)]
+        self.assertEqual(f.intervals, [(1,3), (4,7)])
+        self.assertEqual(im._is_stale_tree, True)
+
 
 # class TestIntervalMetadataMixin(unittest.TestCase):
 #     def setUp(self):

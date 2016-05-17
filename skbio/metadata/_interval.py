@@ -32,61 +32,33 @@ class Interval():
     '''
     def __init__(self, intervals=None, boundaries=None,
                  metadata=None, _interval_metadata=None):
-        self.intervals = intervals
+        self._intervals = intervals
         self.boundaries = boundaries
         self.metadata = metadata
         self._interval_metadata = _interval_metadata
 
-    def __len__(self):
-        return len(self.__d)
-
     def __getitem__(self, key):
-        return self.__d[key]
+        return self.metadata[key]
 
-    def __iter__(self):
-        return iter(self.__d)
-
-    def __repr__(self):
-        return ';'.join('{0}:{1}'.format(k, self[k]) for k in self)
-
-    def __hash__(self):
-        if self._hash is None:
-            self._hash = hash(frozenset(self.items()))
-        return self._hash
-
-    def __lt__(self, other):
-        return hash(self) < hash(other)
-
-    def __gt__(self, other):
-        return hash(self) > hash(other)
+    def __setitem__(self, key, val):
+        self.metadata[key] = val
 
     def __eq__(self, other):
-        return hash(self) == hash(other)
+        return ((self.metadata == other.metadata) and
+                (self.intervals == other.intervals) and
+                (self.boundaries == other.boundaries))
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def update(self, *args, **kwargs):
-        """
-        Creates a new features object.
+    @property
+    def intervals(self):
+        return self._intervals
 
-        Updates the existing attributes of the current Feature object
-        and returns the modified Feature object.
-
-        Parameters
-        ----------
-        args : tuple
-            Positional arguments that can be passed to ``dict``
-        kwargs : dict
-            Keyword arguments of feature name and feature value, which can
-            be passed to ``dict``.
-
-        Returns
-        -------
-        skbio.sequence.Feature
-        """
-        __d = dict(*args, **kwargs)
-        return Feature(**merge_dicts(self.__d, __d))
+    @intervals.setter
+    def intervals(self, value):
+        self._intervals = value
+        self._interval_metadata._is_stale_tree = True
 
 
 class IntervalMetadata():
@@ -94,6 +66,7 @@ class IntervalMetadata():
         # maps features attributes to intervals
         self.features = {}
         self.intervals = IntervalTree()
+        self._is_stale_tree = False
 
     def reverse_complement(self, length):
         """ Reverse complements IntervalMetadata object.
