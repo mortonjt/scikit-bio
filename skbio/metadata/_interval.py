@@ -110,11 +110,13 @@ class IntervalMetadata():
 
         Parameters
         ----------
-        feature : skbio.sequence.feature
-            The feature object being added.
-        intervals : iterable of intervals
-            A list of intervals associated with the feature
-
+        intervals : iterable of tuple of ints
+            A list of intervals associated with the Interval object
+        boundaries : iterable of tuple of bool
+            A list of boundaries associated with the Interval object
+        metadata : dict
+            A dictionary of key word attributes associated with the
+            Interval object
         """
         inv_md = Interval(_interval_metadata=self,
                           intervals=intervals,
@@ -149,17 +151,17 @@ class IntervalMetadata():
         return queries
 
     def query(self, intervals=None, boundaries=None, metadata=None):
-        """ Looks up features that with intervals and keywords.
+        """ Looks up Interval objects with the intervals, boundaries and keywords.
 
         Parameters
         ----------
-        args : I1, I2, ...
-            Iterable of tuples or Intervals
-        kwargs : dict
-            Keyword arguments of feature name and feature value, which can
-            be passed to ``dict``.  This is used to specify the search
-            parameters. If the `location` keyword is passed, then an interval
-            lookup will be performed.
+        intervals : iterable of tuple of ints
+            A list of intervals associated with the Interval object
+        boundaries : iterable of tuple of bool
+            A list of boundaries associated with the Interval object
+        metadata : dict
+            A dictionary of key word attributes associated with the
+            Interval object
 
         Note
         ----
@@ -190,7 +192,20 @@ class IntervalMetadata():
         return invs
 
     def drop(self, intervals=None, boundaries=None, metadata=None):
-        """ DOC TODO """
+        """ Drops Interval objects according to a specified query.
+
+        Drops all Interval objects that matches the query.
+
+        Parameters
+        ----------
+        intervals : iterable of tuple of ints
+            A list of intervals associated with the Interval object
+        boundaries : iterable of tuple of bool
+            A list of boundaries associated with the Interval object
+        metadata : dict
+            A dictionary of key word attributes associated with the
+            Interval object
+        """
         if intervals is None:
             intervals = []
         if metadata is None:
@@ -201,7 +216,6 @@ class IntervalMetadata():
                                   metadata=metadata)
         new_invs = []
         # iterate through queries and drop them
-        # TODO: Not sure if this is correct
         for inv in self._metadata:
             if inv not in queried_invs:
                 new_invs.append(inv)
