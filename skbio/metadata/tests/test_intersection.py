@@ -9,7 +9,7 @@
 import sys
 import unittest
 
-from skbio.metadata import Interval
+from skbio.metadata._intersection import Interval
 from skbio.metadata._intersection import IntervalNode
 from skbio.metadata._intersection import IntervalTree
 

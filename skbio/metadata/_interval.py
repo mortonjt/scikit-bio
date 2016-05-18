@@ -6,9 +6,7 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from ._feature import Feature
 from ._intersection import IntervalTree
-from skbio.util._misc import merge_dicts
 
 
 class Interval():

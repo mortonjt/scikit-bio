@@ -20,9 +20,7 @@ from skbio.metadata._mixin import MetadataMixin, PositionalMetadataMixin
 from skbio.sequence._repr import _SequenceReprBuilder
 from skbio.util._decorator import (stable, experimental, deprecated,
                                    classonlymethod, overrides)
-from skbio.metadata._feature import Feature
 from skbio.metadata._interval import _polish_interval
-# from skbio.metadata import IntervalMetadataMixin
 
 
 class Sequence(MetadataMixin, PositionalMetadataMixin,
@@ -593,7 +591,6 @@ class Sequence(MetadataMixin, PositionalMetadataMixin,
         MetadataMixin._init_(self, metadata=metadata)
         PositionalMetadataMixin._init_(
             self, positional_metadata=positional_metadata)
-        #IntervalMetadataMixin._init_(self, features=interval_metadata)
 
         if lowercase is False:
             pass
@@ -730,9 +727,6 @@ class Sequence(MetadataMixin, PositionalMetadataMixin,
             return False
 
         if not PositionalMetadataMixin._eq_(self, other):
-            return False
-
-        if not IntervalMetadataMixin._eq_(self, other):
             return False
 
         return True

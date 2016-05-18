@@ -17,15 +17,11 @@ This module provides classes for storing and working with metadata.
 
 from skbio.util import TestRunner
 
+from ._interval import IntervalMetadata
+from ._mixin import (PositionalMetadataMixin, MetadataMixin)
 
-from ._interval import IntervalMetadata, Interval
-# from ._mixin import (IntervalMetadataMixin, PositionalMetadataMixin,
-#                      MetadataMixin)
-
-# __all__ = ['Interval', 'IntervalMetadata',
-#            'MetadataMixin', 'PositionalMetadataMixin',
-#            'IntervalMetadataMixin']
-
-__all__ = ['Interval', 'IntervalMetadata',]
+__all__ = ['IntervalMetadata',
+           'MetadataMixin', 'PositionalMetadataMixin',
+           'IntervalMetadataMixin']
 
 test = TestRunner(__file__).test

@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, print_function
 import unittest
 
 from skbio.metadata._interval import _polish_interval
-from skbio.metadata._interval import Interval, IntervalMetadata
-
+from skbio.metadata._interval import Interval
+from skbio.metadata import IntervalMetadata
 
 class TestInterval(unittest.TestCase):
     def setUp(self):
