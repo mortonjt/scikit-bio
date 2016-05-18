@@ -11,8 +11,7 @@ import copy
 
 import pandas as pd
 
-from skbio.util._decorator import stable, experimental
-from skbio.metadata._interval import IntervalMetadata
+from skbio.util._decorator import stable
 from skbio.util._decorator import deprecated
 
 

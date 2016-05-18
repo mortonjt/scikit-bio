@@ -14,6 +14,7 @@ from skbio.metadata._interval import _polish_interval
 from skbio.metadata._interval import Interval
 from skbio.metadata import IntervalMetadata
 
+
 class TestInterval(unittest.TestCase):
     def setUp(self):
         pass
@@ -32,10 +33,10 @@ class TestInterval(unittest.TestCase):
 
     def test_bad_constructor(self):
         with self.assertRaises(ValueError):
-            f = Interval(_interval_metadata=IntervalMetadata(),
-                         intervals=[1, (4, 7)],
-                         boundaries=[(True, False), (False, False)],
-                         metadata={'name': 'sagA', 'function': 'transport'})
+            Interval(_interval_metadata=IntervalMetadata(),
+                     intervals=[1, (4, 7)],
+                     boundaries=[(True, False), (False, False)],
+                     metadata={'name': 'sagA', 'function': 'transport'})
 
     def test_repr(self):
         f = Interval(_interval_metadata=IntervalMetadata(),
