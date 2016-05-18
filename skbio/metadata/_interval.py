@@ -12,9 +12,6 @@ from ._intersection import IntervalTree
 class Interval():
     '''Store the metadata of a sequence interval.
 
-    It is implemented as frozendict and can be used similarly
-    as built-in ``dict``.
-
     Parameters
     ----------
     intervals : list of tuple of ints
@@ -115,6 +112,17 @@ class IntervalMetadata():
         metadata : dict
             A dictionary of key word attributes associated with the
             Interval object
+        Examples
+        --------
+        >>> from skbio.metadata import IntervalMetadata
+        >>> im = IntervalMetadata()
+        >>> interval_metadata.add(intervals=[(0, 2), (4, 7)],
+                                  boundaries=None, metadata={'name': 'sagA'})
+        >>> interval_metadata.add(intervals=[(40, 70)],
+                                  boundaries=None, metadata={'name': 'sagB'})
+        >>> interval_metadata.query(intervals=[(1, 2)])
+        Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})
+
         """
         inv_md = Interval(_interval_metadata=self,
                           intervals=intervals,
@@ -161,16 +169,28 @@ class IntervalMetadata():
             A dictionary of key word attributes associated with the
             Interval object
 
+        Returns
+        -------
+        list, Feature
+            A list of features satisfying the search criteria.
+
+        Examples
+        --------
+        >>> from skbio.metadata import IntervalMetadata
+        >>> im = IntervalMetadata()
+        >>> interval_metadata.add(intervals=[(0, 2), (4, 7)],
+                                  boundaries=None, metadata={'name': 'sagA'})
+        >>> interval_metadata.add(intervals=[(40, 70)],
+                                  boundaries=None, metadata={'name': 'sagB'})
+        >>> interval_metadata.query(intervals=[(1, 2)])
+        Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})
+
         Note
         ----
         There are two types of queries to perform
         1. Query by interval
         2. Query by key/val pair (i.e. gene=sagA)
 
-        Returns
-        -------
-        list, Feature
-            A list of features satisfying the search criteria.
         """
         if self._is_stale_tree:
             self._rebuild_tree(self._metadata)
@@ -203,6 +223,18 @@ class IntervalMetadata():
         metadata : dict
             A dictionary of key word attributes associated with the
             Interval object
+
+        Examples
+        --------
+        >>> from skbio.metadata import IntervalMetadata
+        >>> im = IntervalMetadata()
+        >>> interval_metadata.add(intervals=[(0, 2), (4, 7)],
+                                  boundaries=None, metadata={'name': 'sagA'})
+        >>> interval_metadata.add(intervals=[(40, 70)],
+                                  boundaries=None, metadata={'name': 'sagB'})
+        >>> interval_metadata.drop(metadata={'name': 'sagA'})
+        >>> interval_metadata.query(intervals=[(1, 2)])
+        []
         """
         if intervals is None:
             intervals = []

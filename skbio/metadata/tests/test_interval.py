@@ -139,9 +139,6 @@ class TestIntervalMetadata(unittest.TestCase):
                          {'gene': 'sagA', 'location': 0})
         self.assertTrue(im._intervals is not None)
 
-    def test_add_empty(self):
-        pass
-
     def test_query(self):
         im = IntervalMetadata()
         im.add(intervals=[(0, 2), (4, 7)],
