@@ -20,7 +20,6 @@ from skbio.metadata._mixin import MetadataMixin, PositionalMetadataMixin
 from skbio.sequence._repr import _SequenceReprBuilder
 from skbio.util._decorator import (stable, experimental, deprecated,
                                    classonlymethod, overrides)
-from skbio.metadata._interval import _polish_interval
 
 
 class Sequence(MetadataMixin, PositionalMetadataMixin, collections.Sequence,
@@ -830,7 +829,6 @@ class Sequence(MetadataMixin, PositionalMetadataMixin, collections.Sequence,
         0 GUC
 
         """
-
         if (not isinstance(indexable, np.ndarray) and
             ((not isinstance(indexable, str)) and
              hasattr(indexable, '__iter__'))):
@@ -2241,4 +2239,5 @@ def _slices_from_iter(array, indexables):
         else:
             raise IndexError("Cannot slice sequence from iterable "
                              "containing %r." % i)
+
         yield array[i]
