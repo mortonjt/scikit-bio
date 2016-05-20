@@ -137,22 +137,22 @@ class IntervalMetadata():
         Parameters
         ----------
         intervals : iterable of tuple of ints
-            A list of intervals associated with the Interval object
+            A list of intervals associated with the Interval object.
         boundaries : iterable of tuple of bool
-            A list of boundaries associated with the Interval object
+            A list of boundaries associated with the Interval object.
         metadata : dict
             A dictionary of key word attributes associated with the
-            Interval object
+            Interval object.
         Examples
         --------
         >>> from skbio.metadata import IntervalMetadata
-        >>> im = IntervalMetadata()
+        >>> interval_metadata = IntervalMetadata()
         >>> interval_metadata.add(intervals=[(0, 2), (4, 7)],
-                                  boundaries=None, metadata={'name': 'sagA'})
+        ...                       boundaries=None, metadata={'name': 'sagA'})
         >>> interval_metadata.add(intervals=[(40, 70)],
-                                  boundaries=None, metadata={'name': 'sagB'})
+        ...                       boundaries=None, metadata={'name': 'sagB'})
         >>> interval_metadata.query(intervals=[(1, 2)])
-        Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})
+        [Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})]
 
         """
         inv_md = Interval(interval_metadata=self,
@@ -198,12 +198,12 @@ class IntervalMetadata():
         Parameters
         ----------
         intervals : iterable of tuple of ints
-            A list of intervals associated with the Interval object
+            A list of intervals associated with the Interval object.
         boundaries : iterable of tuple of bool
-            A list of boundaries associated with the Interval object
+            A list of boundaries associated with the Interval object.
         metadata : dict
             A dictionary of key word attributes associated with the
-            Interval object
+            Interval object.
 
         Returns
         -------
@@ -213,19 +213,19 @@ class IntervalMetadata():
         Examples
         --------
         >>> from skbio.metadata import IntervalMetadata
-        >>> im = IntervalMetadata()
+        >>> interval_metadata = IntervalMetadata()
         >>> interval_metadata.add(intervals=[(0, 2), (4, 7)],
-                                  boundaries=None, metadata={'name': 'sagA'})
+        ...                       boundaries=None, metadata={'name': 'sagA'})
         >>> interval_metadata.add(intervals=[(40, 70)],
-                                  boundaries=None, metadata={'name': 'sagB'})
+        ...                       boundaries=None, metadata={'name': 'sagB'})
         >>> interval_metadata.query(intervals=[(1, 2)])
-        Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})
+        [Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})]
 
         Note
         ----
         There are two types of queries to perform
-        1. Query by interval
-        2. Query by key/val pair (i.e. gene=sagA)
+        1. Query by interval.
+        2. Query by key/val pair (i.e. gene=sagA).
 
         """
         if self._is_stale_tree:
@@ -255,23 +255,23 @@ class IntervalMetadata():
         Parameters
         ----------
         intervals : iterable of tuple of ints
-            A list of intervals associated with the Interval object
+            A list of intervals associated with the Interval object.
         boundaries : iterable of tuple of bool
-            A list of boundaries associated with the Interval object
+            A list of boundaries associated with the Interval object.
         metadata : dict
             A dictionary of key word attributes associated with the
-            Interval object
+            Interval object.
 
         Examples
         --------
         >>> from skbio.metadata import IntervalMetadata
-        >>> im = IntervalMetadata()
+        >>> interval_metadata = IntervalMetadata()
         >>> interval_metadata.add(intervals=[(0, 2), (4, 7)],
-                                  boundaries=None, metadata={'name': 'sagA'})
+        ...                       boundaries=None, metadata={'name': 'sagA'})
         >>> interval_metadata.add(intervals=[(40, 70)],
-                                  boundaries=None, metadata={'name': 'sagB'})
+        ...                       boundaries=None, metadata={'name': 'sagB'})
         >>> interval_metadata.drop(metadata={'name': 'sagA'})
-        >>> interval_metadata.query(intervals=[(1, 2)])
+        >>> interval_metadata.query(metadata={'name': 'sagA'})
         []
         """
         if intervals is None:

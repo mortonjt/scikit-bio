@@ -227,11 +227,11 @@ class TestIntervalMetadata(unittest.TestCase):
                intervals=[(3, 5)])
 
         feats = im.query(intervals=[(1, 5)])
-        self.assertEqual(len(feats), 2)
-        self.assertEqual(feats[1].metadata, {'gene': 'sagA', 'location': 0})
-        self.assertEqual(feats[1].intervals, [(0, 2), (4, 7)])
-        self.assertEqual(feats[0].metadata, {'gene': 'sagB', 'location': 0})
-        self.assertEqual(feats[0].intervals, [(3, 5)])
+        exp = [Interval(metadata={'gene': 'sagA', 'location': 0},
+                        intervals=[(0, 2), (4, 7)]),
+               Interval(metadata={'gene': 'sagB', 'location': 0},
+                        intervals=[(3, 5)])]
+        self.assertListEqual(sorted(feats), sorted(exp))
 
     def test_query_intersection(self):
         im = IntervalMetadata()
@@ -243,9 +243,10 @@ class TestIntervalMetadata(unittest.TestCase):
                intervals=[(3, 5)])
 
         feats = im.query(intervals=[(1, 5)], metadata={'gene': 'sagA'})
-        self.assertEqual(len(feats), 1)
-        self.assertEqual(feats[0].metadata, {'gene': 'sagA', 'location': 0})
-        self.assertEqual(feats[0].intervals, [(0, 2), (4, 7)])
+        exp = [Interval(metadata={'gene': 'sagA', 'location': 0},
+                        intervals=[(0, 2), (4, 7)])]
+
+        self.assertEqual(feats, exp)
 
     def test_set_interval_interval(self):
         interval_metadata = IntervalMetadata()
@@ -284,6 +285,16 @@ class TestIntervalMetadata(unittest.TestCase):
         interval_metadata.drop(metadata={'name': 'sagA'})
         feats = list(interval_metadata.query(metadata={'name': 'sagA'}))
         self.assertEqual(len(feats), 0)
+
+    def test_drop_interval(self):
+        from skbio.metadata import IntervalMetadata
+        interval_metadata = IntervalMetadata()
+        interval_metadata.add(intervals=[(0, 2), (4, 7)],
+                              boundaries=None, metadata={'name': 'sagA'})
+        interval_metadata.add(intervals=[(40, 70)],
+                              boundaries=None, metadata={'name': 'sagB'})
+        interval_metadata.drop(metadata={'name': 'sagA'})
+        interval_metadata.query(intervals=[(1, 2)])
 
     def test_reverse_complement(self):
         interval_metadata = IntervalMetadata()
