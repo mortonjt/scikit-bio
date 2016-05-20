@@ -240,7 +240,7 @@ class IntervalMetadata():
                 invs.update(self._query_interval(value))
 
         # Find queries by feature attribute
-        if len(invs) == 0:
+        if len(invs) == 0 and metadata is not None:
             invs = set(self._metadata)
 
         if metadata is not None:

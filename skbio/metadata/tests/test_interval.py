@@ -233,6 +233,14 @@ class TestIntervalMetadata(unittest.TestCase):
                         intervals=[(3, 5)])]
         self.assertListEqual(sorted(feats), sorted(exp))
 
+    def test_query_negative(self):
+        interval_metadata = IntervalMetadata()
+        interval_metadata.add(intervals=[(40, 70)],
+                              boundaries=None,
+                              metadata={'name': 'sagB'})
+        res = interval_metadata.query(intervals=[(100, 101)])
+        self.assertEqual(len(res), 0)
+
     def test_query_intersection(self):
         im = IntervalMetadata()
         im.add(metadata={'gene': 'sagA', 'location': 0},
@@ -294,7 +302,8 @@ class TestIntervalMetadata(unittest.TestCase):
         interval_metadata.add(intervals=[(40, 70)],
                               boundaries=None, metadata={'name': 'sagB'})
         interval_metadata.drop(metadata={'name': 'sagA'})
-        interval_metadata.query(intervals=[(1, 2)])
+        res = interval_metadata.query(intervals=[(1, 2)])
+        self.assertEqual(len(res), 0)
 
     def test_reverse_complement(self):
         interval_metadata = IntervalMetadata()
