@@ -21,25 +21,44 @@ class Interval():
     metadata : dict
         Dictionary of attributes storing information of the feature
         such as `strand`, `gene_name` or `product`.
-    _interval_metadata : object
+    interval_metadata : object
         A reference to the `IntervalMetadata` object that this
         interval is associated to.
     '''
     def __init__(self, intervals=None, boundaries=None,
-                 metadata=None, _interval_metadata=None):
-        self._intervals = []
+                 metadata=None, interval_metadata=None):
+        iv = []
         for interval in intervals:
-            inv = _polish_interval(interval)
-            self._intervals.append(inv)
-        self.boundaries = boundaries
-        self.metadata = metadata
-        self._interval_metadata = _interval_metadata
+            iv.append(_polish_interval(interval))
 
+        if boundaries is not None:
+            self.boundaries = boundaries
+        else:
+            self.boundaries = []
+
+        if metadata is not None:
+            self.metadata = metadata
+        else:
+            self.metadata = {}
+
+        self._interval_metadata = interval_metadata
+
+
+        if intervals is not None:
+            self.intervals = iv
+        else:
+            self.intervals = []
     def __getitem__(self, key):
         return self.metadata[key]
 
     def __setitem__(self, key, val):
         self.metadata[key] = val
+
+    # This is required for creating unique sets of intervals
+    def __hash__(self):
+        return hash(tuple(sorted(self.metadata.items()) + \
+                          self.intervals + \
+                          self.boundaries))
 
     def __lt__(self, other):
         return self.intervals < other.intervals
@@ -58,6 +77,9 @@ class Interval():
                 (self.intervals == other.intervals) and
                 (self.boundaries == other.boundaries))
 
+    def __contains__(self, key):
+        return key in self.metadata
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -68,6 +90,14 @@ class Interval():
             ", metadata=" + str(self.metadata),
             ")"])
 
+    def drop(self):
+        self._interval_metadata.drop(intervals=self.intervals,
+                                     boundaries=self.boundaries,
+                                     metadata=self.metadata)
+        self.boundaries = None
+        self.intervals = None
+        self._interval_metadata = None
+
     @property
     def intervals(self):
         return self._intervals
@@ -75,7 +105,8 @@ class Interval():
     @intervals.setter
     def intervals(self, value):
         self._intervals = value
-        self._interval_metadata._is_stale_tree = True
+        if self._interval_metadata is not None:
+            self._interval_metadata._is_stale_tree = True
 
 
 class IntervalMetadata():
@@ -124,7 +155,7 @@ class IntervalMetadata():
         Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})
 
         """
-        inv_md = Interval(_interval_metadata=self,
+        inv_md = Interval(interval_metadata=self,
                           intervals=intervals,
                           boundaries=boundaries,
                           metadata=metadata)
@@ -149,10 +180,15 @@ class IntervalMetadata():
         invs = self._intervals.find(start, end)
         return invs
 
-    def _query_attribute(self, key, value):
+    def _query_attribute(self, intervals, metadata):
+        if metadata is None:
+            return []
+
         queries = []
-        for inv in self._metadata:
-            if inv[key] == value:
+        for inv in intervals:
+            for (key, value) in metadata.items():
+                if inv[key] != value:
+                    continue
                 queries.append(inv)
         return queries
 
@@ -171,8 +207,8 @@ class IntervalMetadata():
 
         Returns
         -------
-        list, Feature
-            A list of features satisfying the search criteria.
+        list, Interval
+            A list of Intervals satisfying the search criteria.
 
         Examples
         --------
@@ -196,18 +232,21 @@ class IntervalMetadata():
             self._rebuild_tree(self._metadata)
             self._is_stale_tree = False
 
-        invs = []
+        invs = set()
 
         # Find queries by interval
         if intervals is not None:
             for value in intervals:
-                invs += self._query_interval(value)
+                invs.update(self._query_interval(value))
 
         # Find queries by feature attribute
+        filtered_invs = []
+        if len(invs) == 0:
+            invs = set(self._metadata)
+
         if metadata is not None:
-            for (key, value) in metadata.items():
-                invs += self._query_attribute(key, value)
-        return invs
+            invs = self._query_attribute(list(invs), metadata)
+        return list(invs)
 
     def drop(self, intervals=None, boundaries=None, metadata=None):
         """ Drops Interval objects according to a specified query.
