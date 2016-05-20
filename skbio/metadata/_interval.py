@@ -43,11 +43,11 @@ class Interval():
 
         self._interval_metadata = interval_metadata
 
-
         if intervals is not None:
             self.intervals = iv
         else:
             self.intervals = []
+
     def __getitem__(self, key):
         return self.metadata[key]
 
@@ -56,8 +56,8 @@ class Interval():
 
     # This is required for creating unique sets of intervals
     def __hash__(self):
-        return hash(tuple(sorted(self.metadata.items()) + \
-                          self.intervals + \
+        return hash(tuple(sorted(self.metadata.items()) +
+                          self.intervals +
                           self.boundaries))
 
     def __lt__(self, other):
@@ -240,7 +240,6 @@ class IntervalMetadata():
                 invs.update(self._query_interval(value))
 
         # Find queries by feature attribute
-        filtered_invs = []
         if len(invs) == 0:
             invs = set(self._metadata)
 

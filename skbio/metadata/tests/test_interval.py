@@ -215,7 +215,8 @@ class TestIntervalMetadata(unittest.TestCase):
 
         feats = im.query(metadata={'software': 'qiime'})
         self.assertEqual(len(feats), 1)
-        self.assertEqual(feats[0].metadata, {'gene': 'sagA', 'software': 'qiime'})
+        self.assertEqual(feats[0].metadata,
+                         {'gene': 'sagA', 'software': 'qiime'})
         self.assertEqual(feats[0].intervals, [(3, 5)])
 
     def test_query_duplicate1(self):
@@ -241,7 +242,7 @@ class TestIntervalMetadata(unittest.TestCase):
         im.add(metadata={'gene': 'sagB', 'location': 0},
                intervals=[(3, 5)])
 
-        feats = im.query(intervals=[(1, 5)], metadata={'gene':'sagA'})
+        feats = im.query(intervals=[(1, 5)], metadata={'gene': 'sagA'})
         self.assertEqual(len(feats), 1)
         self.assertEqual(feats[0].metadata, {'gene': 'sagA', 'location': 0})
         self.assertEqual(feats[0].intervals, [(0, 2), (4, 7)])
