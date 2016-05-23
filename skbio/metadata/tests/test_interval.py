@@ -364,6 +364,54 @@ class TestIntervalMetadata(unittest.TestCase):
         self.assertNotEqual(interval_metadata1, interval_metadata3)
         self.assertEqual(interval_metadata1, interval_metadata4)
 
+    def test_repr(self):
+
+        interval_metadata = IntervalMetadata()
+        interval_metadata.add(metadata={'gene': 'sagA', 'location': '0'},
+                              intervals=[(0, 2), (4, 7)])
+        interval_metadata.add(metadata={'gene': 'sagB', 'location': '3'},
+                              intervals=[(3, 15)])
+        interval_metadata.add(metadata={'gene': 'sagC', 'location': '3'},
+                              intervals=[(4, 15)])
+        interval_metadata.add(metadata={'gene': 'sagD', 'location': '3'},
+                              intervals=[(5, 15)])
+        interval_metadata.add(metadata={'gene': 'sagE', 'location': '3'},
+                              intervals=[(6, 15)])
+        interval_metadata.add(metadata={'gene': 'sagF', 'location': '3'},
+                              intervals=[(7, 15)])
+        interval_metadata.add(metadata={'gene': 'sagG', 'location': '3'},
+                              intervals=[(8, 15)])
+        interval_metadata.add(metadata={'gene': 'sagH', 'location': '3'},
+                              intervals=[(9, 15)])
+        interval_metadata.add(metadata={'gene': 'sagI', 'location': '3'},
+                              intervals=[(10, 15)])
+        interval_metadata.add(metadata={'gene': 'sagJ', 'location': '3'},
+                              intervals=[(13, 15)])
+        interval_metadata.add(metadata={'gene': 'sagK', 'location': '3'},
+                              intervals=[(14, 15)])
+
+        exp = [Interval(intervals=[(0, 2), (4, 7)],
+                        metadata={'location': '0', 'gene': 'sagA'}),
+               Interval(intervals=[(3, 15)],
+                        metadata={'location': '3', 'gene': 'sagB'}),
+               Interval(intervals=[(4, 15)],
+                        metadata={'location': '3', 'gene': 'sagC'}),
+               Interval(intervals=[(5, 15)],
+                        metadata={'location': '3', 'gene': 'sagD'}),
+               Interval(intervals=[(6, 15)],
+                        metadata={'location': '3', 'gene': 'sagE'}),
+               '...',
+               Interval(intervals=[(8, 15)],
+                        metadata={'location': '3', 'gene': 'sagG'}),
+               Interval(intervals=[(9, 15)],
+                        metadata={'location': '3', 'gene': 'sagH'}),
+               Interval(intervals=[(10, 15)],
+                        metadata={'location': '3', 'gene': 'sagI'}),
+               Interval(intervals=[(13, 15)],
+                        metadata={'location': '3', 'gene': 'sagJ'}),
+               Interval(intervals=[(14, 15)],
+                        metadata={'location': '3', 'gene': 'sagK'})]
+        self.assertEqual(str(exp), repr(interval_metadata))
 
 if __name__ == '__main__':
     unittest.main()

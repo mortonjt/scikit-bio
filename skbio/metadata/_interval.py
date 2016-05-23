@@ -10,7 +10,7 @@ from ._intersection import IntervalTree
 
 
 class Interval():
-    '''Store the metadata of a sequence interval.
+    '''Stores the position and metadata of an interval.
 
     Parameters
     ----------
@@ -47,6 +47,19 @@ class Interval():
             self.intervals = sorted(iv)
         else:
             self.intervals = []
+
+        if interval_metadata is not None:
+            self._add_interval()
+
+    def _add_interval(self):
+        """ Add an interval object to the IntervalTree within
+            IntervalMetadata."""
+        # Add directly to the tree.  So no need for _is_stale_tree
+        for loc in self.intervals:
+            if loc is not None:
+                start, end = loc
+                self._interval_metadata._intervals.add(start, end, self)
+        self._interval_metadata._metadata.append(self)
 
     def __getitem__(self, key):
         return self.metadata[key]
@@ -110,6 +123,7 @@ class Interval():
 
 
 class IntervalMetadata():
+    """ Stores Interval objects """
     def __init__(self):
         # stores metadata for each feature
         self._metadata = []
@@ -118,6 +132,10 @@ class IntervalMetadata():
 
     def _reverse(self, length):
         """ Reverse complements IntervalMetadata object.
+
+        This operation reverses all of the interval coordinates.
+        For instance, this can be used to compare coordinates
+        in the forward strand to coordinates in the reversal strand.
 
         Parameters
         ----------
@@ -132,17 +150,6 @@ class IntervalMetadata():
                             f.intervals))
             f.intervals = invs
 
-    def _add_interval(self, inv_md):
-        """ Add an interval object to the tree
-        """
-        # Add directly to the tree.  So no need for _is_stale_tree
-        for loc in inv_md.intervals:
-            if loc is not None:
-                start, end = loc
-                self._intervals.add(start, end, inv_md)
-
-        self._metadata.append(inv_md)
-
     def add(self, intervals, boundaries=None, metadata=None):
         """ Adds a feature to the metadata object.
 
@@ -155,6 +162,7 @@ class IntervalMetadata():
         metadata : dict
             A dictionary of key word attributes associated with the
             Interval object.
+
         Examples
         --------
         >>> from skbio.metadata import IntervalMetadata
@@ -167,13 +175,15 @@ class IntervalMetadata():
         [Interval(intervals=[(0, 2), (4, 7)], metadata={'name': 'sagA'})]
 
         """
-        inv_md = Interval(interval_metadata=self,
-                          intervals=intervals,
-                          boundaries=boundaries,
-                          metadata=metadata)
-        self._add_interval(inv_md)
+        # Add an interval to the tree. Note that the add functionality is
+        # built within the Interval constructor.
+        Interval(interval_metadata=self,
+                 intervals=intervals,
+                 boundaries=boundaries,
+                 metadata=metadata)
 
     def _rebuild_tree(self, intervals):
+        """ Rebuilds the IntervalTree when the tree is stale."""
         self._intervals = IntervalTree()
         for f in intervals:
             for inv in f.intervals:
@@ -181,11 +191,13 @@ class IntervalMetadata():
                 self._intervals.add(start, end, f)
 
     def _query_interval(self, interval):
+        """ Fetches Interval objects based on query interval"""
         start, end = _polish_interval(interval)
         invs = self._intervals.find(start, end)
         return invs
 
     def _query_attribute(self, intervals, metadata):
+        """ Fetches Interval objects based on query attributes"""
         if metadata is None:
             return []
 
@@ -213,7 +225,7 @@ class IntervalMetadata():
         Returns
         -------
         list, Interval
-            A list of Intervals satisfying the search criteria.
+            A list of Interval objects satisfying the search criteria.
 
         Examples
         --------
@@ -300,6 +312,12 @@ class IntervalMetadata():
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __repr__(self):
+        if len(self._metadata) < 10:
+            return str(self._metadata)
+        else:
+            return str(self._metadata[:5] + ['...'] + self._metadata[-5:])
 
 
 def _polish_interval(interval):
