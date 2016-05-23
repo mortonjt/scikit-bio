@@ -73,9 +73,11 @@ class TestInterval(unittest.TestCase):
                       boundaries=[(True, False), (False, False)],
                       metadata={'name': 'sagA', 'function': 'transport'})
         self.assertTrue(f1 < f2)
+        self.assertTrue(f1 <= f1)
         self.assertTrue(f1 <= f2)
         self.assertFalse(f1 > f2)
         self.assertFalse(f1 >= f2)
+        self.assertTrue(f1 >= f1)
 
     def test_contains(self):
         f1 = Interval(interval_metadata=IntervalMetadata(),
@@ -140,6 +142,15 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(f, f1)
         self.assertNotEqual(f, f2)
         self.assertNotEqual(f, f3)
+        self.assertNotEqual(f2, f3)
+
+    def test_equal_scrambled(self):
+
+        f1 = Interval(intervals=[(9, 12), (4, 5)],
+                      metadata={'name': 'sagA', 'function': 'transport'})
+        f2 = Interval(intervals=[(4, 5), (9, 12)],
+                      metadata={'name': 'sagA', 'function': 'transport'})
+        self.assertEqual(f1, f2)
 
     def test_set_interval(self):
         im = IntervalMetadata()
@@ -174,6 +185,10 @@ class TestIntervalMetadata(unittest.TestCase):
         st, end = _polish_interval((1, 2))
         self.assertEqual(st, 1)
         self.assertEqual(end, 2)
+
+    def test_polish_interval_tuple_bad(self):
+        with self.assertRaises(ValueError):
+            _polish_interval((1, 2, 3))
 
     def test_add(self):
         im = IntervalMetadata()
@@ -293,6 +308,8 @@ class TestIntervalMetadata(unittest.TestCase):
         interval_metadata.drop(metadata={'name': 'sagA'})
         feats = list(interval_metadata.query(metadata={'name': 'sagA'}))
         self.assertEqual(len(feats), 0)
+        feats = list(interval_metadata.query(metadata={'name': 'sagB'}))
+        self.assertGreater(len(feats), 0)
 
     def test_drop_interval(self):
         from skbio.metadata import IntervalMetadata
@@ -304,6 +321,8 @@ class TestIntervalMetadata(unittest.TestCase):
         interval_metadata.drop(metadata={'name': 'sagA'})
         res = interval_metadata.query(intervals=[(1, 2)])
         self.assertEqual(len(res), 0)
+        feats = list(interval_metadata.query(metadata={'name': 'sagB'}))
+        self.assertGreater(len(feats), 0)
 
     def test_reverse_complement(self):
         interval_metadata = IntervalMetadata()

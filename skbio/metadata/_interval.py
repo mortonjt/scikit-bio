@@ -44,7 +44,7 @@ class Interval():
         self._interval_metadata = interval_metadata
 
         if intervals is not None:
-            self.intervals = iv
+            self.intervals = sorted(iv)
         else:
             self.intervals = []
 
@@ -128,8 +128,20 @@ class IntervalMetadata():
         for f in self._metadata:
             # staled doesn't need to be called, since the setter for
             # Interval will take care of this
-            f.intervals = list(map(lambda x: (length-x[1], length-x[0]),
-                                   f.intervals))
+            invs = list(map(lambda x: (length-x[1], length-x[0]),
+                            f.intervals))
+            f.intervals = invs
+
+    def _add_interval(self, inv_md):
+        """ Add an interval object to the tree
+        """
+        # Add directly to the tree.  So no need for _is_stale_tree
+        for loc in inv_md.intervals:
+            if loc is not None:
+                start, end = loc
+                self._intervals.add(start, end, inv_md)
+
+        self._metadata.append(inv_md)
 
     def add(self, intervals, boundaries=None, metadata=None):
         """ Adds a feature to the metadata object.
@@ -159,14 +171,7 @@ class IntervalMetadata():
                           intervals=intervals,
                           boundaries=boundaries,
                           metadata=metadata)
-
-        # Add directly to the tree.  So no need for _is_stale_tree
-        for loc in inv_md.intervals:
-            if loc is not None:
-                start, end = loc
-                self._intervals.add(start, end, inv_md)
-
-        self._metadata.append(inv_md)
+        self._add_interval(inv_md)
 
     def _rebuild_tree(self, intervals):
         self._intervals = IntervalTree()
@@ -244,7 +249,7 @@ class IntervalMetadata():
             invs = set(self._metadata)
 
         if metadata is not None:
-            invs = self._query_attribute(list(invs), metadata)
+            invs = self._query_attribute(invs, metadata)
         return list(invs)
 
     def drop(self, intervals=None, boundaries=None, metadata=None):
@@ -301,10 +306,9 @@ def _polish_interval(interval):
     if isinstance(interval, tuple):
         if len(interval) == 0:
             return None
-        start, end = interval
-        if (len(interval) != 2 or
-            ((not isinstance(start, int)) or
-             (not isinstance(end, int)))):
+        if len(interval) == 2:
+            start, end = interval
+        else:
             raise ValueError("`start` and `end` aren't correctly specified")
     else:
         raise ValueError('The args must be associated with '
