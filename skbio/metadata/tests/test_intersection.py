@@ -104,7 +104,8 @@ class UpDownStreamTestCase(unittest.TestCase):
             self.assertEqual(r[0].start, i + 10)
             self.assertEqual(r[1].start, i + 20)
 
-            r = iv.after_interval(IntervalObj(i, i), max_dist=20, num_intervals=2)
+            r = iv.after_interval(IntervalObj(i, i),
+                                  max_dist=20, num_intervals=2)
             self.assertEqual(r[0].start, i + 10)
             self.assertEqual(r[1].start, i + 20)
 
