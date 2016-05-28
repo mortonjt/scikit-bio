@@ -10,8 +10,8 @@ from __future__ import absolute_import, division, print_function
 
 import unittest
 
-from skbio.metadata._interval import _polish_interval
-from skbio.metadata._interval import Interval
+from skbio.metadata._interval import _assert_valid_interval
+from skbio.metadata import Interval
 from skbio.metadata import IntervalMetadata
 
 
@@ -30,7 +30,7 @@ class TestInterval(unittest.TestCase):
                                           'function': 'transport'})
 
     def test_bad_constructor(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             Interval(interval_metadata=IntervalMetadata(),
                      intervals=[1, (4, 7)],
                      boundaries=[(True, False), (False, False)],
@@ -45,23 +45,6 @@ class TestInterval(unittest.TestCase):
         res = repr(f)
         # because dictionaries are random
         self.assertTrue(res, exp1)
-
-    def test_getitem(self):
-        f = Interval(interval_metadata=IntervalMetadata(),
-                     intervals=[(1, 2), (4, 7)],
-                     boundaries=[(True, False), (False, False)],
-                     metadata={'name': 'sagA', 'function': 'transport'})
-        self.assertEqual(f['name'], 'sagA')
-        self.assertEqual(f['function'], 'transport')
-
-    def test_setitem(self):
-        f = Interval(interval_metadata=IntervalMetadata(),
-                     intervals=[(1, 2), (4, 7)],
-                     boundaries=[(True, False), (False, False)],
-                     metadata={'name': 'sagA', 'function': 'transport'})
-        f['name'] = 'sagB'
-        self.assertEqual(f['name'], 'sagB')
-        self.assertEqual(f['function'], 'transport')
 
     def test_cmp(self):
         f1 = Interval(interval_metadata=IntervalMetadata(),
@@ -177,18 +160,16 @@ class TestIntervalMetadata(unittest.TestCase):
         im = IntervalMetadata()
         self.assertEqual(im._is_stale_tree, False)
 
-    def test_polish_interval_empty(self):
-        res = _polish_interval(())
-        self.assertTrue(res is None)
-
-    def test_polish_interval_tuple(self):
-        st, end = _polish_interval((1, 2))
+    def test_assert_valid_interval_tuple(self):
+        interval = (1, 2)
+        _assert_valid_interval(interval)
+        st, end = interval
         self.assertEqual(st, 1)
         self.assertEqual(end, 2)
 
-    def test_polish_interval_tuple_bad(self):
+    def test_assert_valid_interval_tuple_bad(self):
         with self.assertRaises(ValueError):
-            _polish_interval((1, 2, 3))
+            _assert_valid_interval((1, 2, 3))
 
     def test_add(self):
         im = IntervalMetadata()
@@ -293,9 +274,9 @@ class TestIntervalMetadata(unittest.TestCase):
         interval_metadata.add(intervals=[(3, 4)],
                               boundaries=None, metadata={'name': 'sagB'})
         feats = list(interval_metadata.query(intervals=[(1, 2)]))
-        feats[0]['name'] = 'sagC'
+        feats[0].metadata['name'] = 'sagC'
         feats = list(interval_metadata.query(intervals=[(1, 2)]))
-        self.assertEqual(feats[0]['name'], 'sagC')
+        self.assertEqual(feats[0].metadata['name'], 'sagC')
 
     def test_drop(self):
         interval_metadata = IntervalMetadata()

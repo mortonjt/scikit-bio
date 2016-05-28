@@ -7,10 +7,14 @@
 # ----------------------------------------------------------------------------
 
 from ._intersection import IntervalTree
+from skbio.util._decorator import experimental
 
 
-class Interval():
+class Interval:
     '''Stores the position and metadata of an interval.
+
+    This class supports the storing data for contiguous intervals
+    and non-contiguous intervals.
 
     Parameters
     ----------
@@ -24,12 +28,17 @@ class Interval():
     interval_metadata : object
         A reference to the `IntervalMetadata` object that this
         interval is associated to.
+
+    See Also
+    --------
+    skbio.metadata.IntervalMetadata
     '''
     def __init__(self, intervals=None, boundaries=None,
                  metadata=None, interval_metadata=None):
         iv = []
         for interval in intervals:
-            iv.append(_polish_interval(interval))
+            _assert_valid_interval(interval)
+            iv.append(interval)
 
         if boundaries is not None:
             self.boundaries = boundaries
@@ -61,12 +70,6 @@ class Interval():
                 self._interval_metadata._intervals.add(start, end, self)
         self._interval_metadata._metadata.append(self)
 
-    def __getitem__(self, key):
-        return self.metadata[key]
-
-    def __setitem__(self, key, val):
-        self.metadata[key] = val
-
     # This is required for creating unique sets of intervals
     def __hash__(self):
         return hash(tuple(sorted(self.metadata.items()) +
@@ -85,6 +88,7 @@ class Interval():
     def __ge__(self, other):
         return self.intervals >= other.intervals
 
+    @experimental(as_of='0.4.2-dev')
     def __eq__(self, other):
         return ((self.metadata == other.metadata) and
                 (self.intervals == other.intervals) and
@@ -93,16 +97,19 @@ class Interval():
     def __contains__(self, key):
         return key in self.metadata
 
+    @experimental(as_of='0.4.2-dev')
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @experimental(as_of='0.4.2-dev')
     def __repr__(self):
         return ''.join([
             "Interval("
-            "intervals=" + str(self.intervals),
-            ", metadata=" + str(self.metadata),
+            "intervals=" + repr(self.intervals),
+            ", metadata=" + repr(self.metadata),
             ")"])
 
+    @experimental(as_of='0.4.2-dev')
     def drop(self):
         self._interval_metadata.drop(intervals=self.intervals,
                                      boundaries=self.boundaries,
@@ -112,6 +119,7 @@ class Interval():
         self._interval_metadata = None
 
     @property
+    @experimental(as_of='0.4.2-dev')
     def intervals(self):
         return self._intervals
 
@@ -192,7 +200,8 @@ class IntervalMetadata():
 
     def _query_interval(self, interval):
         """ Fetches Interval objects based on query interval"""
-        start, end = _polish_interval(interval)
+        _assert_valid_interval(interval)
+        start, end = interval
         invs = self._intervals.find(start, end)
         return invs
 
@@ -204,7 +213,7 @@ class IntervalMetadata():
         queries = []
         for inv in intervals:
             for (key, value) in metadata.items():
-                if inv[key] != value:
+                if inv.metadata[key] != value:
                     continue
                 queries.append(inv)
         return queries
@@ -258,7 +267,7 @@ class IntervalMetadata():
 
         # Find queries by feature attribute
         if len(invs) == 0 and metadata is not None:
-            invs = set(self._metadata)
+            invs = self._metadata
 
         if metadata is not None:
             invs = self._query_attribute(invs, metadata)
@@ -320,15 +329,15 @@ class IntervalMetadata():
             return str(self._metadata[:5] + ['...'] + self._metadata[-5:])
 
 
-def _polish_interval(interval):
+def _assert_valid_interval(interval):
     if isinstance(interval, tuple):
-        if len(interval) == 0:
-            return None
         if len(interval) == 2:
             start, end = interval
+            if start > end:
+                raise ValueError("`start` is greater than `end`.")
         else:
-            raise ValueError("`start` and `end` aren't correctly specified")
+            raise ValueError("An interval must be a tuple of exactly "
+                             "two coordinates, not %r" % repr(interval))
     else:
-        raise ValueError('The args must be associated with '
-                         'a tuple when querying')
-    return start, end
+        raise TypeError('The interval must be associated with '
+                        'a tuple when querying.')
