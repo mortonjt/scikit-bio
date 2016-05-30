@@ -162,6 +162,11 @@ class TestIntervalMetadata(unittest.TestCase):
         self.assertEqual(st, 1)
         self.assertEqual(end, 2)
 
+    def test_assert_valid_interval_tuple_swapped(self):
+        interval = (2, 1)
+        with self.assertRaises(ValueError):
+            _assert_valid_interval(interval)
+
     def test_assert_valid_interval_tuple_bad(self):
         with self.assertRaises(ValueError):
             _assert_valid_interval((1, 2, 3))

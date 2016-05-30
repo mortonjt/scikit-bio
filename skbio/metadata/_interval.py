@@ -65,9 +65,8 @@ class Interval:
             IntervalMetadata."""
         # Add directly to the tree.  So no need for _is_stale_tree
         for loc in self.intervals:
-            if loc is not None:
-                start, end = loc
-                self._interval_metadata._intervals.add(start, end, self)
+            start, end = loc
+            self._interval_metadata._intervals.add(start, end, self)
         self._interval_metadata._metadata.append(self)
 
     # This is required for creating unique sets of intervals
@@ -184,8 +183,7 @@ class IntervalMetadata():
         """ Rebuilds the IntervalTree when the tree is stale."""
         self._intervals = IntervalTree()
         for f in intervals:
-            for inv in f.intervals:
-                start, end = inv
+            for start, end in f.intervals:
                 self._intervals.add(start, end, f)
 
     def _query_interval(self, interval):
@@ -326,14 +324,15 @@ class IntervalMetadata():
 
 
 def _assert_valid_interval(interval):
+
     if isinstance(interval, tuple):
-        if len(interval) == 2:
+        try:
             start, end = interval
             if start > end:
                 raise ValueError("`start` is greater than `end`.")
-        else:
+        except:
             raise ValueError("An interval must be a tuple of exactly "
                              "two coordinates, not %r" % (interval, ))
     else:
         raise TypeError('The interval must be associated with '
-                        'a tuple when querying.')
+                        'a tuple.')
