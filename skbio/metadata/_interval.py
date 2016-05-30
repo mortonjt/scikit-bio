@@ -71,22 +71,12 @@ class Interval:
         self._interval_metadata._metadata.append(self)
 
     # This is required for creating unique sets of intervals
-    def __hash__(self):
+    def _hash(self):
         return hash(tuple(sorted(self.metadata.items()) +
                           self.intervals +
                           self.boundaries))
-
-    def __lt__(self, other):
+    def _cmp(self, other):
         return self.intervals < other.intervals
-
-    def __gt__(self, other):
-        return self.intervals > other.intervals
-
-    def __le__(self, other):
-        return self.intervals <= other.intervals
-
-    def __ge__(self, other):
-        return self.intervals >= other.intervals
 
     @experimental(as_of='0.4.2-dev')
     def __eq__(self, other):
@@ -258,20 +248,24 @@ class IntervalMetadata():
             self._rebuild_tree(self._metadata)
             self._is_stale_tree = False
 
-        invs = set()
+        invs = []
 
         # Find queries by interval
         if intervals is not None:
             for value in intervals:
-                invs.update(self._query_interval(value))
+                invs += self._query_interval(value)
 
         # Find queries by feature attribute
         if len(invs) == 0 and metadata is not None:
             invs = self._metadata
 
+        invs = list({q._hash(): q for q in invs}.values())
+
         if metadata is not None:
             invs = self._query_attribute(invs, metadata)
-        return list(invs)
+
+        queried_invs = list({q._hash(): q for q in invs}.values())
+        return queried_invs
 
     def drop(self, intervals=None, boundaries=None, metadata=None):
         """ Drops Interval objects according to a specified query.
@@ -308,16 +302,20 @@ class IntervalMetadata():
         queried_invs = self.query(intervals=intervals,
                                   boundaries=boundaries,
                                   metadata=metadata)
+        queried_invs = {q._hash(): q for q in queried_invs}
+
         new_invs = []
         # iterate through queries and drop them
         for inv in self._metadata:
-            if inv not in queried_invs:
+            if inv._hash() not in queried_invs:
                 new_invs.append(inv)
         self._metadata = new_invs
         self._is_stale_tree = True
 
     def __eq__(self, other):
-        return sorted(self._metadata) == sorted(other._metadata)
+        self_metadata = sorted(self._metadata, key=lambda x: x.intervals)
+        other_metadata = sorted(other._metadata, key=lambda x: x.intervals)
+        return self_metadata == other_metadata
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -337,7 +335,7 @@ def _assert_valid_interval(interval):
                 raise ValueError("`start` is greater than `end`.")
         else:
             raise ValueError("An interval must be a tuple of exactly "
-                             "two coordinates, not %r" % repr(interval))
+                             "two coordinates, not %r" % (interval, ))
     else:
         raise TypeError('The interval must be associated with '
                         'a tuple when querying.')

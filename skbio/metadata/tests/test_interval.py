@@ -55,21 +55,17 @@ class TestInterval(unittest.TestCase):
                       intervals=[(10, 20)],
                       boundaries=[(True, False), (False, False)],
                       metadata={'name': 'sagA', 'function': 'transport'})
-        self.assertTrue(f1 < f2)
-        self.assertTrue(f1 <= f1)
-        self.assertTrue(f1 <= f2)
-        self.assertFalse(f1 > f2)
-        self.assertFalse(f1 >= f2)
-        self.assertTrue(f1 >= f1)
+        self.assertTrue(f1._cmp(f2))
+        self.assertFalse(f2._cmp(f1))
 
     def test_contains(self):
         f1 = Interval(interval_metadata=IntervalMetadata(),
                       intervals=[(1, 2)],
                       boundaries=[(True, False), (False, False)],
                       metadata={'name': 'sagA', 'function': 'transport'})
-        self.assertTrue('name' in f1)
-        self.assertTrue('function' in f1)
-        self.assertFalse('gene' in f1)
+        self.assertTrue('name' in f1.metadata)
+        self.assertTrue('function' in f1.metadata)
+        self.assertFalse('gene' in f1.metadata)
 
     def test_hash(self):
 
@@ -81,7 +77,7 @@ class TestInterval(unittest.TestCase):
                       intervals=[(1, 2)],
                       boundaries=[(True, False), (False, False)],
                       metadata={'name': 'sagA', 'function': 'transport'})
-        self.assertEqual(hash(f1), hash(f2))
+        self.assertEqual(f1._hash(), f2._hash())
 
     def test_drop(self):
         im = IntervalMetadata()
@@ -227,7 +223,8 @@ class TestIntervalMetadata(unittest.TestCase):
                         intervals=[(0, 2), (4, 7)]),
                Interval(metadata={'gene': 'sagB', 'location': 0},
                         intervals=[(3, 5)])]
-        self.assertListEqual(sorted(feats), sorted(exp))
+        self.assertListEqual(sorted(feats, key=lambda x: x.intervals),
+                             sorted(exp, key=lambda x: x.intervals))
 
     def test_query_negative(self):
         interval_metadata = IntervalMetadata()
