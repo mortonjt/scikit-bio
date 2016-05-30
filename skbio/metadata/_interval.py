@@ -8,7 +8,7 @@
 
 from ._intersection import IntervalTree
 from skbio.util._decorator import experimental
-
+from pprint import pformat
 
 class Interval:
     '''Stores the position and metadata of an interval.
@@ -33,7 +33,7 @@ class Interval:
     --------
     skbio.metadata.IntervalMetadata
     '''
-    def __init__(self, intervals=None, boundaries=None,
+    def __init__(self, intervals, boundaries=None,
                  metadata=None, interval_metadata=None):
         iv = []
         for interval in intervals:
@@ -93,11 +93,11 @@ class Interval:
 
     @experimental(as_of='0.4.2-dev')
     def __repr__(self):
-        return ''.join([
-            "Interval("
-            "intervals=" + repr(self.intervals),
-            ", metadata=" + repr(self.metadata),
-            ")"])
+        # need pformat to print out the dictionary
+        # in a consistent manner
+        return 'Interval(intervals=%r, metadata=%s)' % (
+            self.intervals, pformat(self.metadata)
+        )
 
     @experimental(as_of='0.4.2-dev')
     def drop(self):
@@ -294,8 +294,6 @@ class IntervalMetadata():
         >>> interval_metadata.query(metadata={'name': 'sagA'})
         []
         """
-        if intervals is None:
-            intervals = []
         if metadata is None:
             metadata = {}
 

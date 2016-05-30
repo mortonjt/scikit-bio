@@ -12,6 +12,7 @@ Classes
 .. autosummary::
    :toctree: generated/
 
+   Interval
    IntervalMetadata
 """
 

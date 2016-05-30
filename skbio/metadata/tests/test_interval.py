@@ -41,10 +41,9 @@ class TestInterval(unittest.TestCase):
                      intervals=[(1, 2), (4, 7)],
                      metadata={'name': 'sagA', 'function': 'transport'})
         exp1 = (r"Interval(intervals=[(1, 2), (4, 7)], "
-                "metadata={'name': 'sagA', 'function': 'transport'})")
+                "metadata={'function': 'transport', 'name': 'sagA'})")
         res = repr(f)
-        # because dictionaries are random
-        self.assertTrue(res, exp1)
+        self.assertEqual(res, exp1)
 
     def test_cmp(self):
         f1 = Interval(interval_metadata=IntervalMetadata(),
