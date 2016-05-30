@@ -33,9 +33,10 @@ class Interval:
     --------
     skbio.metadata.IntervalMetadata
     '''
-    def __init__(self, intervals, boundaries=None,
-                 metadata=None, interval_metadata=None):
+    def __init__(self, interval_metadata, intervals,
+                 boundaries=None, metadata=None):
         iv = []
+        self._dropped = False
         for interval in intervals:
             _assert_valid_interval(interval)
             iv.append(interval)
@@ -59,6 +60,7 @@ class Interval:
 
         if interval_metadata is not None:
             self._add_interval()
+
 
     def _add_interval(self):
         """ Add an interval object to the IntervalTree within
@@ -106,6 +108,7 @@ class Interval:
         self.boundaries = None
         self.intervals = None
         self._interval_metadata = None
+        self._dropped = True  # TODO: Create test for this
 
     @property
     @experimental(as_of='0.4.2-dev')
@@ -114,9 +117,17 @@ class Interval:
 
     @intervals.setter
     def intervals(self, value):
+        if self.dropped:
+            raise RuntimeError('Cannot change intervals to dropped '
+                               'Interval object')
         self._intervals = value
         if self._interval_metadata is not None:
             self._interval_metadata._is_stale_tree = True
+
+    @property
+    @experimental(as_of='0.4.2-dev')
+    def dropped(self):
+        return self._dropped
 
 
 class IntervalMetadata():

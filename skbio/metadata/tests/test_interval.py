@@ -62,8 +62,8 @@ class TestInterval(unittest.TestCase):
                       intervals=[(1, 2)],
                       boundaries=[(True, False), (False, False)],
                       metadata={'name': 'sagA', 'function': 'transport'})
-        self.assertTrue('name' in f1.metadata)
-        self.assertTrue('function' in f1.metadata)
+        self.assertIn('name', f1.metadata)
+        self.assertIn('function', f1.metadata)
         self.assertFalse('gene' in f1.metadata)
 
     def test_hash(self):
@@ -123,11 +123,13 @@ class TestInterval(unittest.TestCase):
         self.assertNotEqual(f2, f3)
 
     def test_equal_scrambled(self):
-
+        im = IntervalMetadata()
         f1 = Interval(intervals=[(9, 12), (4, 5)],
-                      metadata={'name': 'sagA', 'function': 'transport'})
+                      metadata={'name': 'sagA', 'function': 'transport'},
+                      interval_metadata=im)
         f2 = Interval(intervals=[(4, 5), (9, 12)],
-                      metadata={'name': 'sagA', 'function': 'transport'})
+                      metadata={'name': 'sagA', 'function': 'transport'},
+                      interval_metadata=im)
         self.assertEqual(f1, f2)
 
     def test_set_interval(self):
@@ -224,9 +226,11 @@ class TestIntervalMetadata(unittest.TestCase):
 
         feats = im.query(intervals=[(1, 5)])
         exp = [Interval(metadata={'gene': 'sagA', 'location': 0},
-                        intervals=[(0, 2), (4, 7)]),
+                        intervals=[(0, 2), (4, 7)],
+                        interval_metadata=im),
                Interval(metadata={'gene': 'sagB', 'location': 0},
-                        intervals=[(3, 5)])]
+                        intervals=[(3, 5)],
+                        interval_metadata=im)]
         self.assertListEqual(sorted(feats, key=lambda x: x.intervals),
                              sorted(exp, key=lambda x: x.intervals))
 
@@ -249,7 +253,8 @@ class TestIntervalMetadata(unittest.TestCase):
 
         feats = im.query(intervals=[(1, 5)], metadata={'gene': 'sagA'})
         exp = [Interval(metadata={'gene': 'sagA', 'location': 0},
-                        intervals=[(0, 2), (4, 7)])]
+                        intervals=[(0, 2), (4, 7)],
+                        interval_metadata=im)]
 
         self.assertEqual(feats, exp)
 
@@ -313,7 +318,8 @@ class TestIntervalMetadata(unittest.TestCase):
         interval_metadata._reverse(length=10)
         feats = interval_metadata.query([(5, 7)])
         exp = Interval(intervals=[(5, 7)],
-                       metadata={'gene': 'sagB', 'location': 0})
+                       metadata={'gene': 'sagB', 'location': 0},
+                       interval_metadata=interval_metadata)
         self.assertEqual(feats[0], exp)
 
     def test_eq(self):
@@ -371,28 +377,38 @@ class TestIntervalMetadata(unittest.TestCase):
                               intervals=[(13, 15)])
         interval_metadata.add(metadata={'gene': 'sagK', 'location': '3'},
                               intervals=[(14, 15)])
-
+        interval_metadata2 = IntervalMetadata()
         exp = [Interval(intervals=[(0, 2), (4, 7)],
-                        metadata={'location': '0', 'gene': 'sagA'}),
+                        metadata={'location': '0', 'gene': 'sagA'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(3, 15)],
-                        metadata={'location': '3', 'gene': 'sagB'}),
+                        metadata={'location': '3', 'gene': 'sagB'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(4, 15)],
-                        metadata={'location': '3', 'gene': 'sagC'}),
+                        metadata={'location': '3', 'gene': 'sagC'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(5, 15)],
-                        metadata={'location': '3', 'gene': 'sagD'}),
+                        metadata={'location': '3', 'gene': 'sagD'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(6, 15)],
-                        metadata={'location': '3', 'gene': 'sagE'}),
+                        metadata={'location': '3', 'gene': 'sagE'},
+                        interval_metadata=interval_metadata2),
                '...',
                Interval(intervals=[(8, 15)],
-                        metadata={'location': '3', 'gene': 'sagG'}),
+                        metadata={'location': '3', 'gene': 'sagG'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(9, 15)],
-                        metadata={'location': '3', 'gene': 'sagH'}),
+                        metadata={'location': '3', 'gene': 'sagH'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(10, 15)],
-                        metadata={'location': '3', 'gene': 'sagI'}),
+                        metadata={'location': '3', 'gene': 'sagI'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(13, 15)],
-                        metadata={'location': '3', 'gene': 'sagJ'}),
+                        metadata={'location': '3', 'gene': 'sagJ'},
+                        interval_metadata=interval_metadata2),
                Interval(intervals=[(14, 15)],
-                        metadata={'location': '3', 'gene': 'sagK'})]
+                        metadata={'location': '3', 'gene': 'sagK'},
+                        interval_metadata=interval_metadata2)]
         self.assertEqual(str(exp), repr(interval_metadata))
 
 if __name__ == '__main__':
