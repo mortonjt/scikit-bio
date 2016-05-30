@@ -10,6 +10,7 @@ from ._intersection import IntervalTree
 from skbio.util._decorator import experimental
 from pprint import pformat
 
+
 class Interval:
     '''Stores the position and metadata of an interval.
 
@@ -60,7 +61,6 @@ class Interval:
         if interval_metadata is not None:
             self._add_interval()
 
-
     def _add_interval(self):
         """ Add an interval object to the IntervalTree within
             IntervalMetadata."""
@@ -75,6 +75,7 @@ class Interval:
         return hash(tuple(sorted(self.metadata.items()) +
                           self.intervals +
                           self.boundaries))
+
     def _cmp(self, other):
         return self.intervals < other.intervals
 
@@ -90,6 +91,11 @@ class Interval:
     @experimental(as_of='0.4.2-dev')
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    # TODO: Add test
+    @experimental(as_of='0.4.2-dev')
+    def __str__(self):
+        return self.__repr__()
 
     @experimental(as_of='0.4.2-dev')
     def __repr__(self):
