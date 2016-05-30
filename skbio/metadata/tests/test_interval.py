@@ -97,6 +97,17 @@ class TestInterval(unittest.TestCase):
         feats = im.query(intervals=[(1, 2)])
         self.assertEqual(len(feats), 0)
 
+    def test_drop_none(self):
+        im = IntervalMetadata()
+        im.add(metadata={'gene': 'sagA', 'location': 0},
+               intervals=[(0, 2), (4, 7)])
+        invs = im.query(intervals=[(0, 7)])
+        im.drop(intervals=[(0, 7)])
+        invs[0].drop()
+
+        feats = im.query(intervals=[(1, 2)])
+        self.assertEqual(len(feats), 0)
+
     def test_equal(self):
         f = Interval(interval_metadata=IntervalMetadata(),
                      intervals=[(1, 2), (4, 7)],
@@ -143,12 +154,12 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(im._is_stale_tree, True)
 
     def test_set_interval_none(self):
-        f = Interval(interval_metadata=None,
-                     intervals=[(1, 2), (4, 7)],
-                     boundaries=[(True, False), (False, False)],
-                     metadata={'name': 'sagA', 'function': 'transport'})
-        f.intervals = [(1, 3), (4, 7)]
-        self.assertEqual(f.intervals, [(1, 3), (4, 7)])
+        with self.assertRaises(RuntimeError):
+            f = Interval(interval_metadata=None,
+                         intervals=[(1, 2), (4, 7)],
+                         boundaries=[(True, False), (False, False)],
+                         metadata={'name': 'sagA', 'function': 'transport'})
+            f.intervals = [(1, 3), (4, 7)]
 
 
 class TestIntervalMetadata(unittest.TestCase):

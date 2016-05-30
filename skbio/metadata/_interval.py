@@ -36,7 +36,6 @@ class Interval:
     def __init__(self, interval_metadata, intervals,
                  boundaries=None, metadata=None):
         iv = []
-        self._dropped = False
         for interval in intervals:
             _assert_valid_interval(interval)
             iv.append(interval)
@@ -108,7 +107,6 @@ class Interval:
         self.boundaries = None
         self.intervals = None
         self._interval_metadata = None
-        self._dropped = True  # TODO: Create test for this
 
     @property
     @experimental(as_of='0.4.2-dev')
@@ -127,7 +125,7 @@ class Interval:
     @property
     @experimental(as_of='0.4.2-dev')
     def dropped(self):
-        return self._dropped
+        return self._interval_metadata is None
 
 
 class IntervalMetadata():
