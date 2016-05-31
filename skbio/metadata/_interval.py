@@ -85,9 +85,6 @@ class Interval:
                 (self.intervals == other.intervals) and
                 (self.boundaries == other.boundaries))
 
-    def __contains__(self, key):
-        return key in self.metadata
-
     @experimental(as_of='0.4.2-dev')
     def __ne__(self, other):
         return not self.__eq__(other)
