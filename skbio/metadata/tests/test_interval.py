@@ -37,13 +37,14 @@ class TestInterval(unittest.TestCase):
                      metadata={'name': 'sagA', 'function': 'transport'})
 
     def test_repr(self):
-        f = Interval(interval_metadata=IntervalMetadata(),
+        im = IntervalMetadata()
+        f = Interval(interval_metadata=im,
                      intervals=[(1, 2), (4, 7)],
                      metadata={'name': 'sagA', 'function': 'transport'})
-        exp1 = (r"Interval(intervals=[(1, 2), (4, 7)], "
-                "metadata={'function': 'transport', 'name': 'sagA'})")
+        exp = (r"<Interval: parent=%s, 2 intervals,"
+               " 2 fields, dropped=False>") % (hex(id(im)))
         res = repr(f)
-        self.assertEqual(res, exp1)
+        self.assertEqual(res, exp)
 
     def test_cmp(self):
         f1 = Interval(interval_metadata=IntervalMetadata(),

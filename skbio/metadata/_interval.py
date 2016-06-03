@@ -19,16 +19,17 @@ class Interval:
 
     Parameters
     ----------
+    interval_metadata : object
+        A reference to the `IntervalMetadata` object that this
+        interval is associated to.
     intervals : list of tuple of ints
         List of tuples representing start and end coordinates.
     boundaries : list of tuple of bool
         List of tuples, representing the openness of each interval.
+        If this isn't specified, then all of the boundaries are true.
     metadata : dict
         Dictionary of attributes storing information of the feature
         such as `strand`, `gene_name` or `product`.
-    interval_metadata : object
-        A reference to the `IntervalMetadata` object that this
-        interval is associated to.
 
     See Also
     --------
@@ -91,16 +92,29 @@ class Interval:
 
     # TODO: Add test
     @experimental(as_of='0.4.2-dev')
-    def __str__(self):
-        return self.__repr__()
-
-    @experimental(as_of='0.4.2-dev')
     def __repr__(self):
         # need pformat to print out the dictionary
         # in a consistent manner
-        return 'Interval(intervals=%r, metadata=%s)' % (
-            self.intervals, pformat(self.metadata)
-        )
+        classname = self.__class__.__name__
+        num_intervals = len(self.intervals)
+        num_fields = len(self.metadata.keys())
+        parent = hex(id(self._interval_metadata))
+        summary = ('<%s: parent=%s, %d intervals, '
+                   '%d fields, dropped=%s>') % (
+                       classname, parent, num_intervals,
+                       num_fields, self.dropped)
+        return summary
+
+    # TODO: Add test
+    @experimental(as_of='0.4.2-dev')
+    def __str__(self):
+        intervals = ','.join(map(_str_intervals,
+                                 zip(self.intervals, self.boundaries)))
+
+        # need pformat to print out the dictionary
+        # in a consistent manner
+        metadata = pformat(self.metadata)
+        return "[%s], %s" % (intervals, metadata)
 
     @experimental(as_of='0.4.2-dev')
     def drop(self):
@@ -348,3 +362,27 @@ def _assert_valid_interval(interval):
     else:
         raise TypeError('The interval must be associated with '
                         'a tuple.')
+
+# TODO: create a test for this
+def _assert_valid_boundary(boundary):
+
+    if isinstance(boundary, tuple):
+        try:
+            start, end = boundary
+        except:
+            raise ValueError("An boundary must be a tuple of exactly "
+                             "two coordinates, not %r" % (boundary, ))
+    else:
+        raise TypeError('The boundary must be associated with '
+                        'a tuple.')
+
+# TODO: create a test for this
+def _str_interval(interval, boundary):
+    if boundary[0] and boundary[1]:
+        return "[%d, %d]" % interval
+    elif boundary[0] and not boundary[1]:
+        return "[%d, %d)" % interval
+    elif not boundary[0] and boundary[1]:
+        return "(%d, %d]" % interval
+    else:
+        return "(%d, %d)" % interval
