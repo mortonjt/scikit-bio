@@ -1204,7 +1204,59 @@ class TreeTests(TestCase):
         obs = [(n.name, lin) for n, lin in tree.to_taxonomy(filter_f=f)]
         self.assertEqual(sorted(obs), exp)
 
-    def test_linkage_matrix(self):
+    def test_to_linkage_matrix1(self):
+        # Ensure matches: http://www.southampton.ac.uk/~re1u06/teaching/upgma/
+
+        exp_linkage = np.asarray([[1.0,  5.0,  1.0,  2.0],
+                                  [0.0,  3.0,  8.0,  2.0],
+                                  [6.0,  7.0, 12.5,  3.0],
+                                  [8.0,  9.0, 16.5,  5.0],
+                                  [2.0, 10.0, 29.0,  6.0],
+                                  [4.0, 11.0, 34.0,  7.0]])
+        tree = TreeNode.read(["(E:17.0,(C:14.5,((A:4.0,D:4.0)ad:4.25,"
+                              "(G:6.25,(B:0.5,F:0.5)bf:5.75)bfg:2.0)adgbf:6.25)abcdfg"
+                              ":2.5)abcdfge;\n"])
+
+        res_linkage = tree.to_linkage_matrix()
+
+        id_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+        exp_tree = TreeNode.from_linkage_matrix(exp_linkage, id_list)
+        res_tree = TreeNode.from_linkage_matrix(res_linkage,
+                                                [n.name for n in tree.tips()])
+
+        self.assertEqual(str(tree), str(res_tree))
+
+
+    def test_to_linkage_matrix2(self):
+        # Ensure matches: http://www.southampton.ac.uk/~re1u06/teaching/upgma/
+
+        exp_linkage = np.asarray([[1.0,  5.0,  1.0,  2.0],
+                                  [0.0,  3.0,  8.0,  2.0],
+                                  [6.0,  7.0, 12.5,  3.0],
+                                  [8.0,  9.0, 16.5,  5.0],
+                                  [2.0, 10.0, 29.0,  6.0],
+                                  [4.0, 11.0, 34.0,  7.0]])
+        tree = TreeNode.read(["(E:12.0,(C:14.5,((A:4.0,D:4.0):4.25,"
+                              "(G:6.25,(B:0.5,F:0.5):5.75):2.0):6.25)"
+                              ":2.5);\n"])
+
+        res_linkage = tree.to_linkage_matrix()
+
+        id_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+
+        # exp_tree = TreeNode.read(["(E:1,(C:1,((A:1,D:1):1,"
+        #                           "(G:1,(B:1,F:1):1):1):1)"
+        #                           ":1);\n"])
+
+        exp_tree = TreeNode.from_linkage_matrix(exp_linkage, id_list)
+        res_tree = TreeNode.from_linkage_matrix(res_linkage,
+                                                [n.name for n in tree.tips()])
+        print(exp_tree.ascii_art())
+        print(res_tree.ascii_art())
+        self.assertEqual(str(tree), str(res_tree))
+
+
+    def test_from_linkage_matrix(self):
         # Ensure matches: http://www.southampton.ac.uk/~re1u06/teaching/upgma/
         id_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
         linkage = np.asarray([[1.0,  5.0,  1.0,  2.0],

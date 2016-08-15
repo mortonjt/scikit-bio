@@ -15,6 +15,8 @@ from collections import defaultdict
 
 import numpy as np
 from scipy.stats import pearsonr
+from scipy.cluster.hierarchy import linkage
+from scipy.spatial.distance import squareform
 
 from skbio._base import SkbioObject
 from skbio.stats.distance import DistanceMatrix
@@ -22,6 +24,7 @@ from ._exception import (NoLengthError, DuplicateNodeError, NoParentError,
                          MissingNodeError, TreeError)
 from skbio.util import RepresentationWarning
 from skbio.util._decorator import experimental, classonlymethod
+import scipy
 
 
 def distance_from_r(m1, m2):
@@ -1936,6 +1939,57 @@ class TreeNode(SkbioObject):
             distance += node.children[0].length
             node = node.children[0]
         return distance
+
+    @experimental(as_of="0.5.0")
+    def to_linkage_matrix(self):
+        """Return SciPy linkage matrix from tree.
+
+        Parameters
+        ----------
+        TreeNode
+            An unrooted bifurcated tree
+
+        Returns
+        -------
+        linkage_matrix : ndarray
+            A SciPy linkage matrix as returned by
+            `scipy.cluster.hierarchy.linkage`
+
+        See Also
+        --------
+        scipy.cluster.hierarchy.linkage
+        prune
+        bifurcate
+        """
+        # num_tips = len(list(self.tips()))
+        # dm = np.zeros((num_tips + num_tips-1, 4))
+
+        # for i, n in enumerate(self.tips()):
+        #     n._order = i
+
+        #     if not n.is_tip():
+        #         print(n.name,
+        #               n.children[0]._num_children,
+        #               n.children[1]._num_children)
+
+        #         n._num_children = n.children[0]._num_children + \
+        #                           n.children[1]._num_children
+        #         # get left index
+        #         dm[i, 0] = n.children[0]._order
+        #         # get right index
+        #         dm[i, 1] = n.children[1]._order
+        #         # get linkage distance
+        #         dm[i, 2] = 1
+        #         # get number of elements in cluster
+        #         dm[i, 3] = n._num_children
+
+        #     else:
+        #         n._num_children = 1
+
+        mat = squareform(self.tip_tip_distances().data)
+        dm = linkage(mat,method='single',metric=scipy.spatial.distance.cityblock)
+        return dm
+
 
     @classonlymethod
     @experimental(as_of="0.4.0")
