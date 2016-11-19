@@ -1,31 +1,59 @@
 # scikit-bio changelog
 
-## Version 0.5.0-dev  (changes since 0.5.0 go here)
+## Version 0.5.1-dev (changes since 0.5.1 go here)
 
 ### Features
-* `DissimilarityMatrix` now has a new constructor method called `from_iterable`. ([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
-* `DissimilarityMatrix` now allows non-hollow matrices. ([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
-* `DistanceMatrix.from_iterable` now accepts a `validate=True` parameter. ([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
 
 ### Backward-incompatible changes [stable]
 
 ### Backward-incompatible changes [experimental]
-* Modifying basis handling in `skbio.stats.composition.ilr_inv` prior to checking for orthogonality.  Now the basis is strictly assumed to be in the Aitchison simplex. 
-* `DistanceMatrix.from_iterable` default behavior is now to validate matrix by computing all pairwise distances. Pass `validate=False` to get the previous behavior (no validation, but faster execution).([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
 
 ### Performance enhancements
-* `TreeNode.shear` was rewritten for approximately a 25% performance increase. ([#1399](https://github.com/biocore/scikit-bio/pull/1399))
 
 ### Bug fixes
 
-* `skbio.tree.TreeNode.prune` and implicitly `skbio.tree.TreeNode.shear` were not handling a situation in which a parent was validly removed during pruning operations as may happen if the resulting subtree does not include the root. Previously, an `AttributeError` would raise as `parent` would be `None` in this situation. 
-* numpy linking was fixed for installation under El Capitan.
-
 ### Deprecated functionality [stable]
 
-### Deprecated functionality [stable]
+### Deprecated functionality [experimental]
 
 ### Miscellaneous
+
+## Version 0.5.1 (2016-11-12)
+
+### Features
+* Added `IntervalMetadata` and `Interval` classes in `skbio.metadata` to store, query, and manipulate information of a sub-region of a sequence. ([#1414](https://github.com/biocore/scikit-bio/issues/1414))
+* `Sequence` and its child classes (including `GrammaredSequence`, `RNA`, `DNA`, `Protein`) now accept `IntervalMetadata` in their constructor API. Some of their relevant methods are also updated accordingly. ([#1430](https://github.com/biocore/scikit-bio/pull/1430))
+* GenBank parser now reads and writes `Sequence` or its subclass objects with `IntervalMetadata`. ([#1440](https://github.com/biocore/scikit-bio/pull/1440))
+* `DissimilarityMatrix` now has a new constructor method called `from_iterable`. ([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
+* `DissimilarityMatrix` now allows non-hollow matrices. ([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
+* `DistanceMatrix.from_iterable` now accepts a `validate=True` parameter. ([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
+* ``DistanceMatrix`` now has a new method called ``to_series`` to create a ``pandas.Series`` from a ``DistanceMatrix`` ([#1397](https://github.com/biocore/scikit-bio/issues/1397)).
+* Added parallel beta diversity calculation support via `skbio.diversity.block_beta_diversity`. The issue and idea is discussed in ([#1181](https://github.com/biocore/scikit-bio/issues/1181), while the actual code changes are in [#1352](https://github.com/biocore/scikit-bio/pull/1352)).
+
+### Backward-incompatible changes [stable]
+* The constructor API for `Sequence` and its child classes (including `GrammaredSequence`, `RNA`, `DNA`, `Protein`) are changed from `(sequence, metadata=None, positional_metadata=None, lowercase=False)` to `(sequence, metadata=None, positional_metadata=None, interval_metadata=None, lowercase=False)`
+
+  The changes are made to allow these classes to adopt `IntervalMetadata` object for interval features on the sequence. The `interval_metadata` parameter is added imediately after `positional_metadata` instead of appended to the end, because it is more natural and logical and, more importantly, because it is unlikely in practice to break user code. A user's code would break only if they had supplied `metadata`, `postional_metadata`, and `lowercase` parameters positionally. In the unlikely event that this happens, users will get an error telling them a bool isn't a valid `IntervalMetadata` type, so it won't silently produce buggy behavior.
+
+### Backward-incompatible changes [experimental]
+* Modifying basis handling in `skbio.stats.composition.ilr_inv` prior to checking for orthogonality.  Now the basis is strictly assumed to be in the Aitchison simplex.
+* `DistanceMatrix.from_iterable` default behavior is now to validate matrix by computing all pairwise distances. Pass `validate=False` to get the previous behavior (no validation, but faster execution).([#1343](https://github.com/biocore/scikit-bio/issues/1343)).
+* GenBank I/O now parses sequence features into the attribute of `interval_metadata` instead of `positiona_metadata`. And the key of `FEATURES` is removed from `metadata` attribute.
+
+### Performance enhancements
+* `TreeNode.shear` was rewritten for approximately a 25% performance increase. ([#1399](https://github.com/biocore/scikit-bio/pull/1399))
+* The `IntervalMetadata` allows dramatic decrease in memory usage in reading GenBank files of feature rich sequences. ([#1159](https://github.com/biocore/scikit-bio/issues/1159))
+
+### Bug fixes
+
+* `skbio.tree.TreeNode.prune` and implicitly `skbio.tree.TreeNode.shear` were not handling a situation in which a parent was validly removed during pruning operations as may happen if the resulting subtree does not include the root. Previously, an `AttributeError` would raise as `parent` would be `None` in this situation.
+* numpy linking was fixed for installation under El Capitan.
+* A bug was introduced in #1398 into `TreeNode.prune` and fixed in #1416 in which, under the special case of a single descendent existing from the root, the resulting children parent references were not updated. The cause of the bug was a call made to `self.children.extend` as opposed to `self.extend` where the former is a `list.extend` without knowledge of the tree, while the latter is `TreeNode.extend` which is able to adjust references to `self.parent`.
+
+### Miscellaneous
+
+* Removed deprecated functions from `skbio.util`: `is_casava_v180_or_later`, `remove_files`, and `create_dir`.
+* Removed deprecated `skbio.Sequence.copy` method.
 
 ## Version 0.5.0 (2016-06-14)
 

@@ -64,6 +64,8 @@ ext = '.pyx' if USE_CYTHON else '.c'
 # details. This acts as a workaround until the next Python 3 release -- thanks
 # Wolfgang Maier (wolma) for the workaround!
 ssw_extra_compile_args = ['-Wno-error=declaration-after-statement']
+if sys.platform == 'win32':
+    ssw_extra_compile_args = []
 
 # Users with i686 architectures have reported that adding this flag allows
 # SSW to be compiled. See https://github.com/biocore/scikit-bio/issues/409 and
@@ -72,6 +74,8 @@ if platform.machine() == 'i686':
     ssw_extra_compile_args.append('-msse2')
 
 extensions = [
+    Extension("skbio.metadata._intersection",
+              ["skbio/metadata/_intersection" + ext]),
     Extension("skbio.stats.__subsample",
               ["skbio/stats/__subsample" + ext],
               include_dirs=[np.get_include()]),
