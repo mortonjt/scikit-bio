@@ -1940,7 +1940,8 @@ class TreeNode(SkbioObject):
             node = node.children[0]
         return distance
 
-    @experimental(as_of="0.5.0")
+
+    @experimental(as_of="0.5.1")
     def to_linkage_matrix(self):
         """Return SciPy linkage matrix from tree.
 
@@ -1960,35 +1961,35 @@ class TreeNode(SkbioObject):
         scipy.cluster.hierarchy.linkage
         prune
         bifurcate
+
+        Notes
+        -----
+        Assumes that the tree is strictly bifurcating
         """
-        # num_tips = len(list(self.tips()))
-        # dm = np.zeros((num_tips + num_tips-1, 4))
+        # This needs a reverse postorder
+        num_tips = len(list(self.tips()))
+        dm = np.zeros((num_tips-1, 4))
+        k = 0
+        tree = self.copy()
 
-        # for i, n in enumerate(self.tips()):
-        #     n._order = i
-
-        #     if not n.is_tip():
-        #         print(n.name,
-        #               n.children[0]._num_children,
-        #               n.children[1]._num_children)
-
-        #         n._num_children = n.children[0]._num_children + \
-        #                           n.children[1]._num_children
-        #         # get left index
-        #         dm[i, 0] = n.children[0]._order
-        #         # get right index
-        #         dm[i, 1] = n.children[1]._order
-        #         # get linkage distance
-        #         dm[i, 2] = 1
-        #         # get number of elements in cluster
-        #         dm[i, 3] = n._num_children
-
-        #     else:
-        #         n._num_children = 1
-
-        mat = squareform(self.tip_tip_distances().data)
-        dm = linkage(mat,method='single',metric=scipy.spatial.distance.cityblock)
-        return dm
+        for i, n in enumerate(tree.postorder(include_self=True)):
+            print(k, n.name)
+            n._order = i
+            if n.is_tip():
+                n._num_children = 1
+            else:
+                n._num_children = n.children[0]._num_children + \
+                                  n.children[1]._num_children
+                # get left index
+                dm[k, 0] = n.children[0]._order
+                # get right index
+                dm[k, 1] = n.children[1]._order
+                # get linkage distance
+                dm[k, 2] = 0
+                # get number of elements in cluster
+                dm[k, 3] = n._num_children
+                k+=1
+        return dm[::-1, :]
 
 
     @classonlymethod

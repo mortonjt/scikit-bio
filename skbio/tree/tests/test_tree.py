@@ -1229,12 +1229,14 @@ class TreeTests(TestCase):
                               ":2.5)abcdfge;\n"])
 
         res_linkage = tree.to_linkage_matrix()
+        print(res_linkage)
 
         id_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
         exp_tree = TreeNode.from_linkage_matrix(exp_linkage, id_list)
         res_tree = TreeNode.from_linkage_matrix(res_linkage,
                                                 [n.name for n in tree.tips()])
-
+        print(exp_tree.ascii_art())
+        print(res_tree.ascii_art())
         self.assertEqual(str(tree), str(res_tree))
 
 
