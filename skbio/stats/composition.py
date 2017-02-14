@@ -543,6 +543,11 @@ def ilr(mat, basis=None, check=True):
     check: bool
         Specifies if the basis is orthonormal.
 
+    Returns
+    -------
+    np.array
+        ilr transformed matrix.
+
     Examples
     --------
     >>> import numpy as np
@@ -609,6 +614,10 @@ def ilr_inv(mat, basis=None, check=True):
     check: bool
         Specifies if the basis is orthonormal.
 
+    Returns
+    -------
+    np.array
+        Inverse ilr transformed matrix.
 
     Examples
     --------
