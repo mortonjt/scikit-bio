@@ -307,9 +307,9 @@ fuzzy=[(False, False)], metadata={'gene': 'sagA'})
     -----------------------------
     0 CG
     >>> subseq.positional_metadata
-      list  quality   gaps
-    0   []        3  False
-    1   []        4  False
+       quality list   gaps
+    0        3   []  False
+    1        4   []  False
 
     As described above for metadata, since only a *shallow* copy was made of
     the positional metadata, updates to mutable objects will also change the
@@ -318,21 +318,21 @@ fuzzy=[(False, False)], metadata={'gene': 'sagA'})
 
     >>> subseq.positional_metadata.loc[0, 'list'].append('item')
     >>> subseq.positional_metadata
-         list  quality   gaps
-    0  [item]        3  False
-    1      []        4  False
+       quality    list   gaps
+    0        3  [item]  False
+    1        4      []  False
     >>> seq.positional_metadata
-         list  quality   gaps
-    0      []      999  False
-    1  [item]        3  False
-    2      []        4  False
-    3      []       10  False
+       quality    list   gaps
+    0      999      []  False
+    1        3  [item]  False
+    2        4      []  False
+    3       10      []  False
     >>> positional_metadata
-         list  quality
-    0      []        3
-    1  [item]        3
-    2      []        4
-    3      []       10
+       quality    list
+    0        3      []
+    1        3  [item]
+    2        4      []
+    3       10      []
 
     You can also update the interval metadata. Let's re-create a
     ``Sequence`` object with interval metadata at first:
