@@ -6,9 +6,9 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import os
-import inspect
 import warnings
+import inspect
+import os
 
 import nose
 import numpy as np
@@ -80,6 +80,7 @@ class TestRunner:
     and ugly. This class invokes nose with the required options.
 
     """
+
     @experimental(as_of="0.4.0")
     def __init__(self, filename):
         self._filename = filename
@@ -99,6 +100,29 @@ class TestRunner:
         bool
             test run success status
         """
+        try:
+            import numpy
+            try:
+                # NumPy 1.14 changed repr output breaking our doctests,
+                # request the legacy 1.13 style
+                numpy.set_printoptions(legacy="1.13")
+            except TypeError:
+                # Old Numpy, output should be fine as it is :)
+                # TypeError: set_printoptions() got an unexpected
+                # keyword argument 'legacy'
+                pass
+        except ImportError:
+            numpy = None
+
+        try:
+            import pandas
+            # Max columns is automatically set by pandas based on terminal
+            # width, so set columns to unlimited to prevent the test suite
+            # from passing/failing based on terminal size.
+            pandas.options.display.max_columns = None
+        except ImportError:
+            pandas = None
+
         # NOTE: it doesn't seem to matter what the first element of the argv
         # list is, there just needs to be something there.
         # changes to argv made here should also be made in setup.cfg
@@ -106,6 +130,7 @@ class TestRunner:
                 '--doctest-tests', '--doctest-extension=pyx']
         if verbose:
             argv.append('-v')
+
         return nose.core.run(argv=argv, defaultTest=self._test_dir,
                              addplugins=[SuppressSkbioWarnings()])
 
@@ -191,7 +216,6 @@ def assert_ordination_results_equal(left, right, ignore_method_names=False,
                         ignore_columns=ignore_axis_labels,
                         ignore_directionality=ignore_directionality,
                         decimal=decimal)
-
     _assert_frame_equal(left.biplot_scores, right.biplot_scores,
                         ignore_columns=ignore_axis_labels,
                         ignore_directionality=ignore_directionality,
@@ -230,7 +254,6 @@ def _assert_frame_equal(left_df, right_df, ignore_index=False,
     else:
         left_values = left_df.values
         right_values = right_df.values
-
         if ignore_directionality:
             left_values, right_values = _normalize_signs(left_values,
                                                          right_values)
@@ -281,7 +304,7 @@ def _normalize_signs(arr1, arr2):
         raise ValueError(
             "Arrays must have the same shape ({0} vs {1}).".format(arr1.shape,
                                                                    arr2.shape)
-            )
+        )
 
     # To avoid issues around zero, we'll compare signs of the values
     # with highest absolute value

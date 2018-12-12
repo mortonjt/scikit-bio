@@ -1,6 +1,5 @@
 pip
-# See note in setup.py install_requires about numpy version pin.
-numpy<1.14.0
+numpy
 scipy
 matplotlib
 pandas
@@ -11,3 +10,4 @@ pyflakes
 flake8
 python-dateutil
 decorator
+scikit-learn

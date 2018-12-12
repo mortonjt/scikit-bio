@@ -1,8 +1,83 @@
 # scikit-bio changelog
 
-## Version 0.5.1-dev (changes since 0.5.1 go here)
+## Version 0.5.4-dev
 
 ### Features
+
+* `skbio.stats.composition` now has methods to compute additive log-ratio transformation and inverse additive log-ratio transformation (`alr`, `alr_inv`) as well as a method to build a basis from a sequential binary partition (`sbp_basis`).
+
+### Backward-incompatible changes [stable]
+
+### Backward-incompatible changes [experimental]
+
+### Performance enhancements
+
+### Bug fixes
+
+### Deprecated functionality [stable]
+
+### Deprecated functionality [experimental]
+
+### Miscellaneous
+
+## Version 0.5.4 (2018-08-23)
+
+### Features
+
+* Added `FSVD`, an alternative fast heuristic method to perform Principal Coordinates Analysis, to `skbio.stats.ordination.pcoa`.
+
+### Backward-incompatible changes [stable]
+
+### Backward-incompatible changes [experimental]
+
+### Performance enhancements
+
+* Added optimized utility methods `f_matrix_inplace` and `e_matrix_inplace` which perform `f_matrix` and `e_matrix` computations in-place and are used by the new `center_distance_matrix` method in `skbio.stats.ordination`.
+
+### Bug fixes
+
+### Deprecated functionality [stable]
+
+### Deprecated functionality [experimental]
+
+### Miscellaneous
+
+## Version 0.5.3 (2018-08-07)
+
+### Features
+
+* Added `unpack` and `unpack_by_func` to `skbio.tree.TreeNode` to unpack one or multiple internal nodes. The "unpack" operation removes an internal node and regrafts its children to its parent while retaining the overall length.
+
+* Added `support` to `skbio.tree.TreeNode` to return the support value of a node.
+
+* Added `permdisp` to `skbio.stats.distance` to test for the homogeniety of groups. ([#1228](https://github.com/biocore/scikit-bio/issues/1228)).
+
+* Added `pcoa_biplot` to `skbio.stats.ordination` to project descriptors into a PCoA plot.
+
+* Fixed pandas to 0.22.0 due to this: https://github.com/pandas-dev/pandas/issues/20527
+
+### Backward-incompatible changes [stable]
+
+### Backward-incompatible changes [experimental]
+
+### Performance enhancements
+
+### Bug fixes
+
+* Relaxing type checking in diversity calculations.  ([#1583](https://github.com/biocore/scikit-bio/issues/1583)).
+
+### Deprecated functionality [stable]
+
+### Deprecated functionality [experimental]
+
+### Miscellaneous
+
+
+## Version 0.5.2 (2018-04-18)
+
+### Features
+* Added ``skbio.io.format.embl`` for reading and writing EMBL files for ``DNA``, ``RNA`` and ``Sequence`` classes.
+
 * Removing ValueError check in `skbio.stats._subsample.subsample_counts` when `replace=True` and `n` is greater than the number of items in counts.  [#1527](https://github.com/biocore/scikit-bio/pull/1527)
 
 * Added ``skbio.io.format.gff3`` for reading and writing GFF3 files for ``DNA``, ``Sequence``, and ``IntervalMetadata`` classes. ([#1450](https://github.com/biocore/scikit-bio/pull/1450))
@@ -22,6 +97,12 @@
 
 ### Bug fixes
 * The `include_self` parameter was not being honored in `skbio.TreeNode.tips`. The scope of this bug was that if `TreeNode.tips` was called on a tip, it would always result in an empty `list` when unrolled.
+
+* In `skbio.stats.ordination.ca`, `proportion_explained` was missing in the returned `OrdinationResults` object. ([#1345](https://github.com/biocore/scikit-bio/issues/1345))
+
+* `skbio.diversity.beta_diversity` now handles qualitative metrics as expected such that `beta_diversity('jaccard', mat) == beta_diversity('jaccard', mat > 0)`. Please see [#1549](https://github.com/biocore/scikit-bio/issues/1549) for further detail.
+
+* `skbio.stats.ordination.rda` The occasional column mismatch in output `biplot_scores` is fixed ([#1519](https://github.com/biocore/scikit-bio/issues/1519)).
 
 ### Deprecated functionality [stable]
 
