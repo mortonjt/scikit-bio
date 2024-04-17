@@ -37,3 +37,10 @@ class SequenceEmbedding(Embedding):
 
     def __init__(self, embedding, sequence, **kwargs):
         super(SequenceEmbedding, self).__init__(embedding, sequence, **kwargs)
+
+
+class SequenceVector(Embedding):
+    """Store embeddings for a biological sequence."""
+
+    def __init__(self, vector, sequence, **kwargs):
+        super(SequenceVector, self).__init__(vector, sequence, **kwargs)

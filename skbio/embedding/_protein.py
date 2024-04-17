@@ -9,6 +9,7 @@ from skbio.sequence import Protein
 from skbio.embedding._embedding import SequenceEmbedding
 from skbio.util import get_data_path
 from pathlib import Path
+from typing import List
 
 
 class ProteinEmbedding(SequenceEmbedding):
@@ -88,3 +89,118 @@ class ProteinEmbedding(SequenceEmbedding):
             f"embedding dimension: {self.embedding.shape[1]}\n{indent}has gaps",
         )
         return rstr
+
+
+class ProteinVector(SequenceVector):
+    """ A vector representation of the protein sequence.
+
+    Parameters
+    ----------
+    sequence : str, Sequence, or 1D np.ndarray
+        Characters representing the protein sequence itself.
+    vector : np.ndarray
+        The vector representation of the protein sequence.
+
+    See Also
+    --------
+    Protein
+
+    """
+
+    def __init__(
+        self, vector, sequence: str, **kwargs
+    ):
+        super(ProteinVector, self).__init__(
+            embedding=vector, sequence=sequence,  **kwargs
+        )
+
+    def __str__(self):
+        return str(self._ids)
+
+    def __repr__(self):
+        """
+        Return a string representation of the ProteinVector object.
+
+        Returns
+        -------
+        str
+            A string representation of the ProteinEmbedding object.
+
+        See Also
+        --------
+        Protein
+        """
+        seq = Protein(str(self._ids))
+
+        rstr = repr(seq)
+        rstr = rstr.replace("Protein", "ProteinVector")
+        n_indent = 4  # see Sequence.__repr__
+        indent = " " * n_indent
+        rstr = rstr.replace(
+            "has gaps",
+            f"vector dimension: {self.embedding.shape[1]}\n{indent}has gaps",
+        )
+        return rstr
+
+    @staticmethod
+    def to_distance_matrix(protein_vectors):
+        """
+        Convert a ProteinVector object to a DistanceMatrix object.
+
+        Parameters
+        ----------
+        protein_vectors : iterable of ProteinVector objects
+            An iterable of ProteinVector objects.
+
+        Returns
+        -------
+        DistanceMatrix
+            A DistanceMatrix object.
+
+        See Also
+        --------
+        DistanceMatrix
+        """
+        pass
+
+    @staticmethod
+    def to_ordination(protein_vectors):
+        """
+        Convert a list of ProteinVector objects to an Ordination object.
+
+        Parameters
+        ----------
+        protein_vectors : iterable of ProteinVector objects
+            An iterable of ProteinVector objects.
+
+        Returns
+        -------
+        Ordination
+            An Ordination object.
+
+        See Also
+        --------
+        Ordination
+        """
+        pass
+
+    @staticmethod
+    def to_dataframe(protein_vectors):
+        """
+        Convert a list of ProteinVector objects to a pandas DataFrame.
+
+        Parameters
+        ----------
+        protein_vectors : iterable of ProteinVector objects
+            An iterable of ProteinVector objects.
+
+        Returns
+        -------
+        DataFrame
+            A pandas DataFrame.
+
+        See Also
+        --------
+        DataFrame
+        """
+        pass
