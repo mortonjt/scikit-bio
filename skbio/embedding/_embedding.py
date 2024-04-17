@@ -44,3 +44,7 @@ class SequenceVector(Embedding):
 
     def __init__(self, vector, sequence, **kwargs):
         super(SequenceVector, self).__init__(vector, sequence, **kwargs)
+
+    @property
+    def vector(self):
+        return self._embedding
