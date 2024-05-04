@@ -108,7 +108,9 @@ def _embed_sniffer(fh):
     if magic == b"\x89HDF\r\n\x1a\n":
         with h5py.File(fh, "r") as h5file:
             if "embedding" in h5file and "id" in h5file and "idptr" in h5file:
-                return True, {}
+                if "format" in h5file.attr and "format-version" in h5file.attr:
+                    return True, {}
+
 
     return False, {}
 
@@ -124,14 +126,22 @@ def _embed_to_generator(
     embed_fh = h5grp["embedding"]
     id_fh = h5grp["id"]
     idptr_fh = h5grp["idptr"]
-    j = 0
+    has_embedding_ptr = "embedding_ptr" in h5grp
+    if has_embedding_ptr:
+        embptr_fh = h5grp["embedding_ptr"]
+    j, k = 0, 0
     n = idptr_fh.shape[0]
     for i in range(n):
         idptr = idptr_fh[i]
         id_ = id_fh[j:idptr]
-        emb = embed_fh[j:idptr]
+        if has_embedding_ptr:
+            embptr = embptr_fh[i]
+            emb = embed_fh[k:embptr]
+        else:
+            emb = embed_fh[j:idptr]
         string = str(id_.tobytes().decode("ascii"))
         j = idptr
+        k = embptr
         yield constructor(emb, string, **kwargs)
 
 
@@ -165,14 +175,26 @@ def _embed_to_protein(
     )
 
 
-def _objects_to_embed(objs, fh):
-    with h5py.File(fh, "w") as h5grp:
+@embed.reader(ProteinVector)
+def _vectors_to_protein(
+    fh,
+    kwargs: dict = {},
+):
+    return _embed_to_object(
+        fh,
+        constructor=ProteinVector,
+        obj_constructor=Protein,
+        kwargs=kwargs,
+    )
 
+
+def _objects_to_embed(objs, fh, include_embedding_pointer=False):
+    with h5py.File(fh, "w") as h5grp:
         h5grp.attrs["format"] = "embedding"
         h5grp.attrs["format-version"] = "1.0"
         maxsize = 1
         resize = False
-        for i, obj in enumerate(objs):
+        for i, obj in enumerate(objs):            
             # store string representation of the object
             # that will serve as an identifier for the entire object.
             # for sequences, this could be the sequence itself
@@ -191,18 +213,26 @@ def _objects_to_embed(objs, fh):
             if "dim" not in h5grp.attrs:
                 h5grp.attrs["dim"] = emb.shape[1]
 
+            # resize if necessary
+            if i > 0:
+                if include_embedding_pointer:
+                    if ((len(arr) + idptr_fh[i - 1]) > maxsize or
+                        (emb.shape[0] + embptr_fh[i - 1]) > maxsize ):
+                        maxsize = ceil(max(len(arr) + idptr_fh[i - 1],
+                                       emb.shape[0] + embptr_fh[i - 1]) * 1.38)
+                        resize = True
+                else:
+                    if len(arr) + idptr_fh[i - 1] > maxsize:
+                        maxsize = ceil(len(arr) + idptr_fh[i - 1] * 1.38)
+                        resize = True
+                
             # store the pointers that keep track of the start and
             # end of the embedding for each object, as well as well as
             # the corresponding string representation
-            if i > 0 and "idptr" in h5grp:
+            if "idptr" in h5grp:
                 idptr_fh = h5grp["idptr"]
-
-                if len(arr) + idptr_fh[i - 1] > maxsize:
-                    maxsize = ceil(len(arr) + idptr_fh[i - 1] * 1.38)
-                    resize = True
-
                 if resize:
-                    idptr_fh.resize((ceil(i * 1.38),))
+                    idptr_fh.resize((maxsize,))
                 idptr_fh[i] = len(arr) + idptr_fh[i - 1]
             else:
                 idptr_fh = h5grp.create_dataset(
@@ -220,6 +250,21 @@ def _objects_to_embed(objs, fh):
                     compression='gzip'
                 )
 
+            if include_embedding_pointer:
+
+                if "embedding_ptr" in h5grp:
+                    embptr_fh = h5grp["embedding_ptr"]
+                    if resize:
+                        embptr_fh.resize((maxsize,))
+                    embptr_fh[i] = emb.shape[0] + embptr_fh[i - 1]
+
+                else:
+                    embptr_fh = h5grp.create_dataset(
+                        "embedding_ptr",
+                        data=[emb.shape[0]],
+                        maxshape=(None,),
+                        dtype=np.int32,
+                    )
             if "embedding" in h5grp:
                 embed_fh = h5grp["embedding"]
                 assert embed_fh.shape[1] == emb.shape[1], (
@@ -228,7 +273,12 @@ def _objects_to_embed(objs, fh):
                 )
                 if resize:
                     embed_fh.resize(maxsize, axis=0)
-                embed_fh[idptr_fh[i - 1] : idptr_fh[i]] = emb
+                    
+                if include_embedding_pointer:
+                    embed_fh[embptr_fh[i - 1] : embptr_fh[i]] = emb
+                else:
+                    embed_fh[idptr_fh[i - 1] : idptr_fh[i]] = emb
+
             else:
                 embed_fh = h5grp.create_dataset(
                     "embedding",
@@ -237,11 +287,14 @@ def _objects_to_embed(objs, fh):
                     dtype=obj.embedding.dtype,
                     compression='gzip'
                 )
+                
+
+            resize = False
+
         # resize the datasets to the actual number of objects
         maxsize = idptr_fh[i]
         idptr_fh.resize((maxsize,))
         id_fh.resize((maxsize,))
-        embed_fh.resize(maxsize, axis=0)
 
 
 @embed.writer(None)
@@ -251,4 +304,9 @@ def _generator_to_embed(objs, fh):
 
 @embed.writer(ProteinEmbedding)
 def _protein_to_embed(obj, fh):
+    _objects_to_embed([obj], fh)
+
+
+@embed.writer(ProteinVector)
+def _protein_to_vector(obj, fh):
     _objects_to_embed([obj], fh)

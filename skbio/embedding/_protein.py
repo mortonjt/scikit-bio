@@ -7,11 +7,29 @@
 # ----------------------------------------------------------------------------
 from skbio.sequence import Protein
 from skbio.embedding._embedding import SequenceEmbedding
+from skbio.embedding._embedding import SequenceVector
+from skbio.stats.ordination import OrdinationResults
+from scipy.spatial.distance import pdist, squareform
+from skbio import DistanceMatrix
 from skbio.util import get_data_path
 from pathlib import Path
 import pandas as pd
 import numpy as np
+from typing import List
 
+
+def _validate_protein(sequence):
+    if isinstance(sequence, Protein):
+        sequence = str(sequence)
+    elif isinstance(sequence, str):
+        if " " in sequence:
+            sequence = sequence.replace(" ", "")
+
+        # perform a check to make sure the sequence is a valid
+        # protein sequence
+        Protein(sequence)
+    return sequence
+    
 
 class ProteinEmbedding(SequenceEmbedding):
     r"""Stores the embeddings of the protein sequence.
@@ -48,16 +66,7 @@ class ProteinEmbedding(SequenceEmbedding):
         if clip_tail:
             embedding = embedding[:-1]
 
-        if isinstance(sequence, Protein):
-            sequence = str(sequence)
-        elif isinstance(sequence, str):
-            if " " in sequence:
-                sequence = sequence.replace(" ", "")
-
-            # perform a check to make sure the sequence is a valid
-            # protein sequence
-            Protein(sequence)
-
+        sequence = _validate_protein(sequence)
         super(ProteinEmbedding, self).__init__(
             embedding=embedding, sequence=sequence, **kwargs
         )
@@ -96,3 +105,54 @@ class ProteinEmbedding(SequenceEmbedding):
 example_protein_embedding = ProteinEmbedding(
     np.random.randn(62, 1024),
     'IGKEEIQQRLAQFVDHWKELKQLAAARGQRLEESLEYQQFVANVEEEEAWINEKMTLVASED')
+
+
+class ProteinVector(SequenceVector):
+    """ A vector representation of the protein sequence.
+
+    Parameters
+    ----------
+    sequence : str, Sequence, or 1D np.ndarray
+        Characters representing the protein sequence itself.
+    vector : np.ndarray
+        The vector representation of the protein sequence.
+
+    See Also
+    --------
+    Protein
+
+    """
+
+    def __init__(
+        self, vector, sequence: str, **kwargs
+    ):
+
+        sequence = _validate_protein(sequence)
+        super(ProteinVector, self).__init__(
+            vector, sequence=sequence,  **kwargs
+        )
+
+    def __repr__(self):
+        """
+        Return a string representation of the ProteinVector object.
+
+        Returns
+        -------
+        str
+            A string representation of the ProteinEmbedding object.
+
+        See Also
+        --------
+        Protein
+        """
+        seq = Protein(str(self._ids))
+
+        rstr = repr(seq)
+        rstr = rstr.replace("Protein", "ProteinVector")
+        n_indent = 4  # see Sequence.__repr__
+        indent = " " * n_indent
+        rstr = rstr.replace(
+            "has gaps",
+            f"vector dimension: {self.embedding.shape[1]}\n{indent}has gaps",
+        )
+        return rstr

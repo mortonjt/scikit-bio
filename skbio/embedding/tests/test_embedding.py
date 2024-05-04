@@ -64,6 +64,30 @@ class SequenceEmbeddingTests(TestCase):
             SequenceEmbedding(self.emb, self.seq + "A")
 
 
+class SequenceVectorTest(self):
+    def setUp(self):
+        pass
+
+    def test_valid(self):
+        pass
+
+    def test_str(self):
+        pass
+
+    def test_sequence(self):
+        pass
+
+    def test_vector(self):
+        pass
+
+    def test_repr(self):
+        pass
+
+    def test_to_numpy(self):
+        pass
+
+    def test_to_distance_matrix(self):
+        pass
 
 if __name__ == '__main__':
     main()

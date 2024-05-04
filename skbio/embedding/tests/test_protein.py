@@ -17,6 +17,7 @@ from skbio.embedding._protein import ProteinEmbedding
 import numpy as np
 import numpy.testing as npt
 
+
 class ProteinEmbeddingTests(TestCase):
 
     def setUp(self):
@@ -81,6 +82,20 @@ class ProteinEmbeddingTests(TestCase):
         emb, s = self.emb, self.seq
         p_emb = ProteinEmbedding(emb, s)
         self.assertTrue('ProteinEmbedding' in repr(p_emb))
+
+
+def ProteinVectorTests(TestCase):
+    def setUp(self):
+        pass
+
+    def test_valid_protein_vector(self):
+        pass
+
+    def test_invalid_orotein_vector(self):
+        pass
+                                  
+    def test_repr(self):
+        pass
 
 
 if __name__ == '__main__':

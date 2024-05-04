@@ -115,5 +115,22 @@ class EmbeddingTests(TestCase):
                 self.assertEqual(str(obj1), str(obj2))
             
 
+class VectorTests(TestCase):
+    def setUp(self):
+        pass
+
+    def test_sniffer(self):
+        pass
+    
+    def test_read_write_single(self):
+        pass
+
+    def test_read_write_generator(self):
+        pass
+
+    def test_write_generator(self):
+        pass
+    
+                
 if __name__ == '__main__':
     main()
