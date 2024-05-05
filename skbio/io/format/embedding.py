@@ -200,7 +200,7 @@ def _vector_to_protein(
     )
 
 
-def _objects_to_embed(objs, fh, include_embedding_pointer=False):
+def _objects_to_embed(objs, fh, include_embedding_pointer=True):
     with h5py.File(fh, "w") as h5grp:
         h5grp.attrs["format"] = "embedding"
         h5grp.attrs["format-version"] = "1.0"

@@ -170,7 +170,8 @@ class VectorTests(TestCase):
         writable_emb_path2 = 'test2.emb'
         objs1 = [ProteinVector(emb, seq) for emb, seq in self.sequences]
         _generator_to_embed(objs1, self.writable_emb_path2)
-        objs2 = _embed_to_generator(self.writable_emb_path2)
+        objs2 = _embed_to_generator(self.writable_emb_path2,
+                                    constructor=ProteinVector)
         for obj1, obj2 in zip(objs1, objs2):
             np.testing.assert_array_equal(obj1.embedding, obj2.embedding)
             self.assertEqual(str(obj1), str(obj2))
