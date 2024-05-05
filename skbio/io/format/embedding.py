@@ -84,7 +84,9 @@ from math import ceil
 import h5py
 from skbio.io import create_format
 from skbio.embedding._protein import ProteinEmbedding
+from skbio.embedding._protein import ProteinVector
 from skbio.sequence import Protein
+
 
 embed = create_format("embed", encoding="binary")
 

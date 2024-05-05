@@ -10,7 +10,6 @@ from skbio.embedding._embedding import SequenceEmbedding
 from skbio.embedding._embedding import SequenceVector
 from skbio.stats.ordination import OrdinationResults
 from scipy.spatial.distance import pdist, squareform
-from skbio import DistanceMatrix
 from skbio.util import get_data_path
 from pathlib import Path
 import pandas as pd
@@ -122,6 +121,7 @@ class ProteinVector(SequenceVector):
     Protein
 
     """
+    default_write_format = "embed"
 
     def __init__(
         self, vector, sequence: str, **kwargs

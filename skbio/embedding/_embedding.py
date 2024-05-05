@@ -10,7 +10,9 @@ import numpy as np
 
 from skbio.sequence import Sequence
 from skbio._base import SkbioObject
+from skbio.stats.distance import DistanceMatrix
 from skbio.metadata._mixin import MetadataMixin
+from typing import List
 
 
 class Embedding(SkbioObject):
@@ -108,7 +110,7 @@ class SequenceVector(Embedding):
             sequence = str(sequence)
         if isinstance(sequence, str):
             sequence = sequence.encode("ascii")
-        seq = np.array([sequence], dtype=np.str)
+        seq = np.array([sequence], dtype='O')
         super(SequenceVector, self).__init__(vector, seq, **kwargs)    
 
     def __str__(self):
@@ -150,7 +152,7 @@ class SequenceVector(Embedding):
         return rstr    
 
     @staticmethod
-    def to_numpy(sequence_vectors : List[SequenceVector]):
+    def to_numpy(sequence_vectors : List["SequenceVector"]):
         lens = [len(pv.vector) for pv in sequence_vectors]
         if not all(l == lens[0] for l in lens):
             raise ValueError("All vectors must have the same length.")
@@ -158,7 +160,7 @@ class SequenceVector(Embedding):
         return data
 
     @staticmethod
-    def to_distance_matrix(sequence_vectors : List[SequenceVector],
+    def to_distance_matrix(sequence_vectors : List["SequenceVector"],
                            metric='euclidean'):
         """
         Convert a SequenceVector object to a DistanceMatrix object.
@@ -186,7 +188,7 @@ class SequenceVector(Embedding):
         return DistanceMatrix(dm, ids=ids)
 
     @staticmethod
-    def to_ordination(sequence_vectors : List[SequenceVector]):
+    def to_ordination(sequence_vectors : List["SequenceVector"]):
         """
         Convert a list of SequenceVector objects to an Ordination object.
 
@@ -219,7 +221,7 @@ class SequenceVector(Embedding):
         return ordr
 
     @staticmethod
-    def to_dataframe(sequence_vectors : List[SequenceVector]):
+    def to_dataframe(sequence_vectors : List["SequenceVector"]):
         """
         Convert a list of SequenceVector objects to a pandas DataFrame.
 
