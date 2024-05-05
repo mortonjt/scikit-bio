@@ -7,11 +7,13 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
-
+import pandas as pd
 from skbio.sequence import Sequence
 from skbio._base import SkbioObject
 from skbio.stats.distance import DistanceMatrix
+from skbio.stats.ordination import OrdinationResults
 from skbio.metadata._mixin import MetadataMixin
+from scipy.spatial.distance import pdist, squareform
 from typing import List
 
 
@@ -116,6 +118,14 @@ class SequenceVector(Embedding):
             sequence = str(sequence)
         if isinstance(sequence, str):
             sequence = sequence.encode("ascii")
+
+        if len(vector.shape) == 1:
+            vector = vector.reshape(1, -1)
+        if len(vector.shape) == 2:
+            assert vector.shape[0] == 1, (
+                "Only 1 vector per sequence is allowed."
+            )
+            
         seq = np.array([sequence], dtype='O')
         super(SequenceVector, self).__init__(vector, seq, **kwargs)    
 
