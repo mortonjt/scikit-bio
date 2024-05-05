@@ -23,7 +23,8 @@ from skbio.io.format.embedding import (
     _embed_sniffer, _embed_to_generator,
     _embed_to_object, _generator_to_embed,
     _objects_to_embed,
-    _embed_to_protein, _protein_to_embed
+    _embed_to_protein, _protein_to_embed,
+    _protein_to_vector, _vector_to_protein
 )
 from skbio.util import get_data_path
 
@@ -159,9 +160,10 @@ class VectorTests(TestCase):
         for emb, seq in self.sequences:
             fh = self.writable_emb_path
             obj = ProteinVector(emb, seq)
-            _protein_to_embed(obj, fh)
-            emb2 = _embed_to_protein(fh)
-            np.testing.assert_array_equal(emb, emb2.embedding)
+            _protein_to_vector(obj, fh)
+            emb2 = _vector_to_protein(fh)
+            np.testing.assert_array_equal(
+                emb, emb2.embedding.ravel())
             self.assertEqual(str(seq), str(emb2))
 
     def test_read_write_generator(self):

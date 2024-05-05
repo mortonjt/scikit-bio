@@ -52,7 +52,13 @@ class Embedding(SkbioObject):
 
     def __str__(self):
         raise NotImplemented
-    
+
+    def bytes(self):
+        r""" Bytes representation of string encoding"""
+        seq = np.frombuffer(str(self).encode("ascii"),
+                            dtype=np.uint8)
+        return seq
+        
     
 class SequenceEmbedding(Embedding):
     r"""Store embeddings for a biological sequence."""
@@ -69,7 +75,7 @@ class SequenceEmbedding(Embedding):
     def __str__(self):
         r""" String representation of the underlying sequence """
         return str(self._ids.tobytes().decode('ascii'))
-
+        
     @property
     def sequence(self):
         r""" String representation of the underlying sequence """
@@ -119,7 +125,7 @@ class SequenceVector(Embedding):
     @property
     def sequence(self):
         r""" String representation of the underlying sequence """
-        return str(self)    
+        return str(self)
 
     @property
     def vector(self):
@@ -151,6 +157,11 @@ class SequenceVector(Embedding):
         )
         return rstr    
 
+    @property
+    def embedding(self):
+        r""" The embedding tensor. """
+        return self._embedding.reshape(1, -1)
+    
     @staticmethod
     def to_numpy(sequence_vectors : List["SequenceVector"]):
         lens = [len(pv.vector) for pv in sequence_vectors]
