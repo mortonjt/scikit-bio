@@ -141,7 +141,8 @@ class VectorTests(TestCase):
         tempdir = Path(self.tempdir.name)
         self.writable_emb_path = str(tempdir / Path('test.emb'))
         self.writable_emb_path2 = str(tempdir / Path('test2.emb'))
-
+        
+        self.valid_embed_path = get_data_path('prot_vec.emb')
         self.invalid_embed_path = str(tempdir / Path('invalid'))
         self.nonembed_hdf5_path = str(tempdir / Path('other.hdf5'))
 
@@ -153,9 +154,13 @@ class VectorTests(TestCase):
 
     def test_sniffer(self):
         # make sure that the sniffer throws errors as expected
+        self.assertEqual(_embed_sniffer(self.valid_embed_path), (True, {}))
         self.assertEqual(_embed_sniffer(self.invalid_embed_path), (False, {}))
         self.assertEqual(_embed_sniffer(self.nonembed_hdf5_path), (False, {}))
-    
+        emb, seq = self.sequences[0]
+        obj = ProteinVector(emb, seq)
+        _protein_to_vector(obj, 'prot_vec.emb')
+            
     def test_read_write_single(self):
         for emb, seq in self.sequences:
             fh = self.writable_emb_path
@@ -191,8 +196,7 @@ class VectorTests(TestCase):
             for obj1, obj2 in zip(objs1, objs2):
                 np.testing.assert_array_equal(obj1.embedding, obj2.embedding)
                 self.assertEqual(str(obj1), str(obj2))
-            
-    
+                
                 
 if __name__ == '__main__':
     main()

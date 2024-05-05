@@ -119,8 +119,7 @@ def _embed_sniffer(fh):
     # 26
     if magic == b"\x89HDF\r\n\x1a\n":
         with h5py.File(fh, "r") as h5file:
-            if "embedding" in h5file and "id" in h5file and "idptr" in h5file:
-                if "format" in h5file.attrs and "format-version" in h5file.attrs:
+            if "embedding" in h5file and "id" in h5file and "idptr" in h5file:            
                     return True, {}
 
 
