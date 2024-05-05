@@ -128,6 +128,12 @@ class ProteinVector(SequenceVector):
     ):
 
         sequence = _validate_protein(sequence)
+        if len(vector.shape) == 1:
+            vector = vector.reshape(1, -1)
+        if len(vector.shape) == 2:
+            assert vector.shape[0] == 1, (
+                "Only 1 vector per sequence is allowed."
+            )
         super(ProteinVector, self).__init__(
             vector, sequence=sequence,  **kwargs
         )
@@ -145,7 +151,7 @@ class ProteinVector(SequenceVector):
         --------
         Protein
         """
-        seq = Protein(str(self._ids))
+        seq = Protein(str(self))
 
         rstr = repr(seq)
         rstr = rstr.replace("Protein", "ProteinVector")

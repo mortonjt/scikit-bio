@@ -114,7 +114,7 @@ class SequenceVector(Embedding):
         super(SequenceVector, self).__init__(vector, seq, **kwargs)    
 
     def __str__(self):
-        return str(np.assscalar(self._ids))
+        return str(self._ids[0].decode('ascii'))
             
     @property
     def sequence(self):
