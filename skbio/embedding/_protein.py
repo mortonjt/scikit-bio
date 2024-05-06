@@ -66,6 +66,7 @@ class ProteinEmbedding(SequenceEmbedding):
             embedding = embedding[:-1]
 
         sequence = _validate_protein(sequence)
+
         super(ProteinEmbedding, self).__init__(
             embedding=embedding, sequence=sequence, **kwargs
         )
@@ -162,3 +163,5 @@ class ProteinVector(SequenceVector):
             f"vector dimension: {self.embedding.shape[1]}\n{indent}has gaps",
         )
         return rstr
+=======
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78

@@ -119,9 +119,8 @@ def _embed_sniffer(fh):
     # 26
     if magic == b"\x89HDF\r\n\x1a\n":
         with h5py.File(fh, "r") as h5file:
-            if "embedding" in h5file and "id" in h5file and "idptr" in h5file:            
-                    return True, {}
-
+            if "embedding" in h5file and "id" in h5file and "idptr" in h5file:
+                return True, {}
 
     return False, {}
 
@@ -207,6 +206,15 @@ def _objects_to_embed(objs, fh, include_embedding_pointer=True):
         max_embsize = 1        
         resize = False
         for i, obj in enumerate(objs):            
+=======
+def _objects_to_embed(objs, fh):
+    with h5py.File(fh, "w") as h5grp:
+
+        h5grp.attrs["format"] = "embedding"
+        h5grp.attrs["format-version"] = "1.0"
+        maxsize = 1
+        resize = False
+        for i, obj in enumerate(objs):
             # store string representation of the object
             # that will serve as an identifier for the entire object.
             # for sequences, this could be the sequence itself
@@ -243,6 +251,17 @@ def _objects_to_embed(objs, fh, include_embedding_pointer=True):
             # the corresponding string representation
             if "idptr" in h5grp:
                 idptr_fh = h5grp["idptr"]
+=======
+            # store the pointers that keep track of the start and
+            # end of the embedding for each object, as well as well as
+            # the corresponding string representation
+            if i > 0 and "idptr" in h5grp:
+                idptr_fh = h5grp["idptr"]
+
+                if len(arr) + idptr_fh[i - 1] > maxsize:
+                    maxsize = ceil(len(arr) + idptr_fh[i - 1] * 1.38)
+                    resize = True
+
                 if resize:
                     idptr_fh.resize((ceil(i * 1.38),))
                 idptr_fh[i] = len(arr) + idptr_fh[i - 1]

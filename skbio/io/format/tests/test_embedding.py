@@ -17,14 +17,21 @@ import tempfile
 import skbio
 from skbio import Sequence, DNA, RNA, Protein, TabularMSA
 from skbio.embedding._protein import ProteinEmbedding
+<<<<<<< HEAD
 from skbio.embedding._protein import ProteinVector
+=======
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78
 from skbio.io import FASTAFormatError, QUALFormatError
 from skbio.io.format.embedding import (
     _embed_sniffer, _embed_to_generator,
     _embed_to_object, _generator_to_embed,
     _objects_to_embed,
+<<<<<<< HEAD
     _embed_to_protein, _protein_to_embed,
     _protein_to_vector, _vector_to_protein
+=======
+    _embed_to_protein, _protein_to_embed
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78
 )
 from skbio.util import get_data_path
 
@@ -111,12 +118,17 @@ class EmbeddingTests(TestCase):
 
             skbio.io.write(objs1, format='embed', into=writable_emb_path)
             objs2 = iter(skbio.io.read(writable_emb_path, format='embed',
+<<<<<<< HEAD
                                        constructor=ProteinEmbedding))
+=======
+                                      constructor=ProteinEmbedding))
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78
             for obj1, obj2 in zip(objs1, objs2):
                 np.testing.assert_array_equal(obj1.embedding, obj2.embedding)
                 self.assertEqual(str(obj1), str(obj2))
             
 
+<<<<<<< HEAD
 class VectorTests(TestCase):
     def setUp(self):
         # single sequence
@@ -198,5 +210,7 @@ class VectorTests(TestCase):
                 self.assertEqual(str(obj1), str(obj2))
                 
                 
+=======
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78
 if __name__ == '__main__':
     main()

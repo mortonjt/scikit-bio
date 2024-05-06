@@ -62,6 +62,7 @@ class Embedding(SkbioObject):
         return seq
         
     
+
 class SequenceEmbedding(Embedding):
     r"""Store embeddings for a biological sequence."""
 
@@ -77,7 +78,7 @@ class SequenceEmbedding(Embedding):
     def __str__(self):
         r""" String representation of the underlying sequence """
         return str(self._ids.tobytes().decode('ascii'))
-        
+    
     @property
     def sequence(self):
         r""" String representation of the underlying sequence """
@@ -264,3 +265,5 @@ class SequenceVector(Embedding):
         df = pd.DataFrame(data, index=[str(pv) for pv in sequence_vectors])
         return df
     
+=======
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78

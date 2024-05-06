@@ -72,6 +72,7 @@ class SequenceEmbeddingTests(TestCase):
             SequenceEmbedding(self.emb, self.seq + "A")
 
 
+<<<<<<< HEAD
 class TestSequenceVectorMethods(TestCase):
 
     def setUp(self):
@@ -107,6 +108,8 @@ class TestSequenceVectorMethods(TestCase):
         self.assertEqual(ordination_results.samples.shape, (3, 3))
         self.assertEqual(ordination_results.features.shape, (3, 3))
 
+=======
+>>>>>>> e3a27f56970fded68ba7561767cec41e47ba3c78
 
 if __name__ == '__main__':
     main()
