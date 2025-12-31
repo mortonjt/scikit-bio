@@ -5,8 +5,9 @@ Ordination methods (:mod:`skbio.stats.ordination`)
 .. currentmodule:: skbio.stats.ordination
 
 This module contains several ordination methods, including Principal
-Coordinate Analysis, Correspondence Analysis, Redundancy Analysis and
-Canonical Correspondence Analysis.
+Coordinate Analysis, Correspondence Analysis, Redundancy Analysis,
+Canonical Correspondence Analysis, Robust PCA, and Compositional
+Tensor Factorization.
 
 Ordination Functions
 --------------------
@@ -19,6 +20,8 @@ Ordination Functions
    pcoa_biplot
    cca
    rda
+   rpca
+   ctf
 
 Classes
 -------
@@ -27,6 +30,8 @@ Classes
    :toctree:
 
    OrdinationResults
+   OptSpace
+   TensorFactorization
 
 Utility Functions
 -----------------
@@ -40,6 +45,8 @@ Utility Functions
    svd_rank
    e_matrix
    f_matrix
+   matrix_rclr
+   tensor_rclr
 
 Examples
 --------
@@ -136,7 +143,14 @@ from ._principal_coordinate_analysis import pcoa, pcoa_biplot
 from ._ordination_results import OrdinationResults
 from ._utils import (mean_and_std, scale, svd_rank, corr, e_matrix, f_matrix,
                      center_distance_matrix)
+from ._rclr import matrix_rclr, tensor_rclr
+from ._optspace import OptSpace
+from ._tf import TensorFactorization
+from ._rpca import rpca
+from ._ctf import ctf
 
 __all__ = ['ca', 'rda', 'cca', 'pcoa', 'pcoa_biplot', 'OrdinationResults',
            'mean_and_std', 'scale', 'svd_rank', 'corr',
-           'e_matrix', 'f_matrix', 'center_distance_matrix']
+           'e_matrix', 'f_matrix', 'center_distance_matrix',
+           'matrix_rclr', 'tensor_rclr', 'OptSpace', 'TensorFactorization',
+           'rpca', 'ctf']
