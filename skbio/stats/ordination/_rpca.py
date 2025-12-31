@@ -24,9 +24,7 @@ References
 import numpy as np
 import pandas as pd
 from scipy.linalg import svd
-from scipy.spatial.distance import pdist, squareform
 
-from skbio.stats.distance import DistanceMatrix
 from skbio.util._decorator import experimental
 from ._ordination_results import OrdinationResults
 from ._rclr import matrix_rclr
@@ -108,9 +106,6 @@ def rpca(table, n_components=3, min_sample_count=0, min_feature_count=0,
     OrdinationResults
         The ordination results including sample coordinates, feature
         loadings, eigenvalues, and proportion explained.
-    DistanceMatrix
-        Aitchison distance matrix between samples based on the
-        completed matrix.
 
     Raises
     ------
@@ -136,8 +131,7 @@ def rpca(table, n_components=3, min_sample_count=0, min_feature_count=0,
     1. Filter the table by minimum counts and frequency (optional)
     2. Apply robust CLR transformation (log-ratio with geometric mean)
     3. Use OptSpace to complete the matrix (fill NaN values)
-    4. Perform SVD on the completed matrix
-    5. Compute Aitchison distances from the completed matrix
+    4. Perform SVD on the completed matrix to extract principal components
 
     References
     ----------
@@ -162,7 +156,7 @@ def rpca(table, n_components=3, min_sample_count=0, min_feature_count=0,
 
     Perform RPCA:
 
-    >>> ordination, distances = rpca(table, n_components=3)
+    >>> ordination = rpca(table, n_components=3)
     >>> print(ordination.proportion_explained[:3])  # doctest: +SKIP
     PC1    0.35...
     PC2    0.20...
@@ -235,11 +229,6 @@ def rpca(table, n_components=3, min_sample_count=0, min_feature_count=0,
     # Create axis labels
     axis_labels = ['PC%d' % i for i in range(1, n_components + 1)]
 
-    # Compute Aitchison distance matrix from completed rclr values
-    # Euclidean distance on rclr-transformed data = Aitchison distance
-    distances = pdist(completed, metric='euclidean')
-    distance_matrix = DistanceMatrix(squareform(distances), ids=sample_ids)
-
     # Create OrdinationResults
     ordination_results = OrdinationResults(
         short_method_name='RPCA',
@@ -253,4 +242,4 @@ def rpca(table, n_components=3, min_sample_count=0, min_feature_count=0,
                                         index=axis_labels)
     )
 
-    return ordination_results, distance_matrix
+    return ordination_results

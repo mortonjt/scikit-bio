@@ -12,7 +12,7 @@ import numpy as np
 import numpy.testing as npt
 import pandas as pd
 
-from skbio import DistanceMatrix, OrdinationResults
+from skbio import OrdinationResults
 from skbio.stats.ordination._ctf import ctf, _build_tensor, _filter_tensor
 
 
@@ -170,7 +170,7 @@ class TestCTF(unittest.TestCase):
 
     def test_basic_ctf(self):
         """Test basic CTF analysis."""
-        results = ctf(
+        subject_ord, state_ord = ctf(
             self.table, self.metadata,
             individual_id_column='subject_id',
             state_column='time',
@@ -179,8 +179,6 @@ class TestCTF(unittest.TestCase):
             n_initializations=2
         )
 
-        subject_ord, state_ord, distances, subj_traj, feat_traj = results
-
         # Check subject ordination
         self.assertIsInstance(subject_ord, OrdinationResults)
         self.assertEqual(subject_ord.short_method_name, 'CTF')
@@ -188,16 +186,9 @@ class TestCTF(unittest.TestCase):
         # Check state ordination
         self.assertIsInstance(state_ord, OrdinationResults)
 
-        # Check distance matrix
-        self.assertIsInstance(distances, DistanceMatrix)
-
-        # Check trajectories
-        self.assertIsInstance(subj_traj, pd.DataFrame)
-        self.assertIsInstance(feat_traj, pd.DataFrame)
-
     def test_ctf_subject_ordination_shape(self):
         """Test subject ordination has correct shape."""
-        subject_ord, _, _, _, _ = ctf(
+        subject_ord, _ = ctf(
             self.table, self.metadata,
             'subject_id', 'time',
             n_components=2,
@@ -211,7 +202,7 @@ class TestCTF(unittest.TestCase):
 
     def test_ctf_state_ordination_shape(self):
         """Test state ordination has correct shape."""
-        _, state_ord, _, _, _ = ctf(
+        _, state_ord = ctf(
             self.table, self.metadata,
             'subject_id', 'time',
             n_components=2,
@@ -222,62 +213,6 @@ class TestCTF(unittest.TestCase):
         # 4 time points, 2 components
         self.assertEqual(state_ord.samples.shape[0], 4)
         self.assertEqual(state_ord.samples.shape[1], 2)
-
-    def test_ctf_distance_matrix(self):
-        """Test distance matrix properties."""
-        _, _, distances, _, _ = ctf(
-            self.table, self.metadata,
-            'subject_id', 'time',
-            n_components=2,
-            max_als_iterations=10,
-            n_initializations=2
-        )
-
-        # Should be symmetric
-        npt.assert_almost_equal(distances.data, distances.data.T)
-
-        # Diagonal should be zero
-        npt.assert_almost_equal(np.diag(distances.data), 0)
-
-        # Should have 6 subjects
-        self.assertEqual(len(distances.ids), 6)
-
-    def test_ctf_subject_trajectory(self):
-        """Test subject trajectory DataFrame."""
-        _, _, _, subj_traj, _ = ctf(
-            self.table, self.metadata,
-            'subject_id', 'time',
-            n_components=2,
-            max_als_iterations=10,
-            n_initializations=2
-        )
-
-        # Should have columns for components
-        self.assertIn('PC1', subj_traj.columns)
-        self.assertIn('PC2', subj_traj.columns)
-
-        # Should have 6 rows (subjects)
-        self.assertEqual(len(subj_traj), 6)
-
-    def test_ctf_feature_trajectory(self):
-        """Test feature trajectory DataFrame."""
-        _, _, _, _, feat_traj = ctf(
-            self.table, self.metadata,
-            'subject_id', 'time',
-            n_components=2,
-            max_als_iterations=10,
-            n_initializations=2
-        )
-
-        # Should have state column
-        self.assertIn('time', feat_traj.columns)
-
-        # Should have feature_id column
-        self.assertIn('feature_id', feat_traj.columns)
-
-        # Should have component columns
-        self.assertIn('PC1', feat_traj.columns)
-        self.assertIn('PC2', feat_traj.columns)
 
     def test_ctf_non_dataframe_table_error(self):
         """Test error on non-DataFrame table."""
@@ -343,7 +278,7 @@ class TestCTFWithFiltering(unittest.TestCase):
 
     def test_ctf_with_filtering(self):
         """Test CTF with various filtering parameters."""
-        results = ctf(
+        subject_ord, state_ord = ctf(
             self.table, self.metadata,
             'subject', 'time',
             n_components=2,
@@ -353,10 +288,9 @@ class TestCTFWithFiltering(unittest.TestCase):
             n_initializations=2
         )
 
-        subject_ord, _, _, _, _ = results
-
         # Should still produce valid results
         self.assertIsInstance(subject_ord, OrdinationResults)
+        self.assertIsInstance(state_ord, OrdinationResults)
 
 
 class TestCTFAxisLabels(unittest.TestCase):
@@ -386,7 +320,7 @@ class TestCTFAxisLabels(unittest.TestCase):
             'subject': subjects, 'time': timepoints
         }, index=sample_ids)
 
-        subject_ord, state_ord, _, _, _ = ctf(
+        subject_ord, state_ord = ctf(
             table, metadata, 'subject', 'time',
             n_components=2,
             max_als_iterations=10,

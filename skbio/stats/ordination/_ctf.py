@@ -22,9 +22,7 @@ References
 
 import numpy as np
 import pandas as pd
-from scipy.spatial.distance import pdist, squareform
 
-from skbio.stats.distance import DistanceMatrix
 from skbio.util._decorator import experimental
 from ._ordination_results import OrdinationResults
 from ._rclr import tensor_rclr
@@ -204,12 +202,6 @@ def ctf(table, sample_metadata, individual_id_column, state_column,
     OrdinationResults
         State ordination results with state coordinates and
         feature loadings.
-    DistanceMatrix
-        Distance matrix between subjects.
-    pd.DataFrame
-        Subject trajectory data with coordinates and metadata.
-    pd.DataFrame
-        Feature trajectory data with loadings for each state.
 
     Raises
     ------
@@ -264,7 +256,7 @@ def ctf(table, sample_metadata, individual_id_column, state_column,
 
     Perform CTF:
 
-    >>> subject_ord, state_ord, dists, subj_traj, feat_traj = ctf(
+    >>> subject_ord, state_ord = ctf(
     ...     table, metadata, 'subject', 'timepoint', n_components=2
     ... )  # doctest: +SKIP
 
@@ -378,33 +370,4 @@ def ctf(table, sample_metadata, individual_id_column, state_column,
                                         index=axis_labels)
     )
 
-    # Compute distance matrix between subjects
-    distances = pdist(subject_loadings, metric='euclidean')
-    distance_matrix = DistanceMatrix(squareform(distances), ids=individual_ids)
-
-    # Create subject trajectory DataFrame
-    subject_trajectory = pd.DataFrame(
-        subject_loadings,
-        index=individual_ids,
-        columns=axis_labels
-    )
-    subject_trajectory.index.name = individual_id_column
-
-    # Create feature trajectory DataFrame (loadings per state)
-    feature_trajectory_data = []
-    for state_idx, state_id in enumerate(state_ids):
-        for feat_idx, feature_id in enumerate(feature_ids):
-            row = {
-                state_column: state_id,
-                'feature_id': feature_id
-            }
-            for comp_idx, label in enumerate(axis_labels):
-                # Product of state and feature loadings
-                row[label] = (state_loadings[state_idx, comp_idx] *
-                              feature_loadings[feat_idx, comp_idx])
-            feature_trajectory_data.append(row)
-
-    feature_trajectory = pd.DataFrame(feature_trajectory_data)
-
-    return (subject_ordination, state_ordination, distance_matrix,
-            subject_trajectory, feature_trajectory)
+    return subject_ordination, state_ordination

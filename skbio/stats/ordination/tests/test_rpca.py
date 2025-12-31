@@ -12,9 +12,8 @@ import numpy as np
 import numpy.testing as npt
 import pandas as pd
 
-from skbio import DistanceMatrix, OrdinationResults
+from skbio import OrdinationResults
 from skbio.stats.ordination._rpca import rpca, _filter_table
-from skbio.util import assert_ordination_results_equal
 
 
 class TestFilterTable(unittest.TestCase):
@@ -88,7 +87,7 @@ class TestRPCA(unittest.TestCase):
 
     def test_basic_rpca(self):
         """Test basic RPCA analysis."""
-        ordination, distances = rpca(self.table, n_components=3)
+        ordination = rpca(self.table, n_components=3)
 
         # Check ordination results
         self.assertIsInstance(ordination, OrdinationResults)
@@ -102,13 +101,9 @@ class TestRPCA(unittest.TestCase):
         self.assertEqual(ordination.features.shape[0], self.table.shape[1])
         self.assertEqual(ordination.features.shape[1], 3)
 
-        # Check distance matrix
-        self.assertIsInstance(distances, DistanceMatrix)
-        self.assertEqual(len(distances.ids), self.table.shape[0])
-
     def test_rpca_preserves_sample_ids(self):
         """Test that sample IDs are preserved."""
-        ordination, _ = rpca(self.table, n_components=2)
+        ordination = rpca(self.table, n_components=2)
 
         self.assertListEqual(
             list(ordination.samples.index),
@@ -117,7 +112,7 @@ class TestRPCA(unittest.TestCase):
 
     def test_rpca_preserves_feature_ids(self):
         """Test that feature IDs are preserved."""
-        ordination, _ = rpca(self.table, n_components=2)
+        ordination = rpca(self.table, n_components=2)
 
         self.assertListEqual(
             list(ordination.features.index),
@@ -126,7 +121,7 @@ class TestRPCA(unittest.TestCase):
 
     def test_rpca_proportion_explained(self):
         """Test that proportion explained sums to <= 1."""
-        ordination, _ = rpca(self.table, n_components=3)
+        ordination = rpca(self.table, n_components=3)
 
         # Proportion should sum to approximately 1 or less
         total_prop = ordination.proportion_explained.sum()
@@ -137,7 +132,7 @@ class TestRPCA(unittest.TestCase):
 
     def test_rpca_eigvals_decreasing(self):
         """Test that eigenvalues are in decreasing order."""
-        ordination, _ = rpca(self.table, n_components=3)
+        ordination = rpca(self.table, n_components=3)
 
         eigvals = ordination.eigvals.values
         for i in range(len(eigvals) - 1):
@@ -145,7 +140,7 @@ class TestRPCA(unittest.TestCase):
 
     def test_rpca_with_filtering(self):
         """Test RPCA with filtering parameters."""
-        ordination, distances = rpca(
+        ordination = rpca(
             self.table,
             n_components=2,
             min_sample_count=5,
@@ -155,20 +150,6 @@ class TestRPCA(unittest.TestCase):
 
         # Results should still be valid
         self.assertIsInstance(ordination, OrdinationResults)
-        self.assertIsInstance(distances, DistanceMatrix)
-
-    def test_rpca_distance_matrix_symmetric(self):
-        """Test that distance matrix is symmetric."""
-        _, distances = rpca(self.table, n_components=2)
-
-        # Check symmetry
-        npt.assert_almost_equal(distances.data, distances.data.T)
-
-    def test_rpca_distance_matrix_diagonal_zero(self):
-        """Test that distance matrix diagonal is zero."""
-        _, distances = rpca(self.table, n_components=2)
-
-        npt.assert_almost_equal(np.diag(distances.data), 0)
 
     def test_rpca_non_dataframe_error(self):
         """Test error on non-DataFrame input."""
@@ -223,17 +204,14 @@ class TestRPCAReproducibility(unittest.TestCase):
 
         # Run twice with same seed
         np.random.seed(123)
-        ord1, dist1 = rpca(table, n_components=2)
+        ord1 = rpca(table, n_components=2)
 
         np.random.seed(123)
-        ord2, dist2 = rpca(table, n_components=2)
+        ord2 = rpca(table, n_components=2)
 
         # Results should be identical
         npt.assert_almost_equal(
             ord1.samples.values, ord2.samples.values
-        )
-        npt.assert_almost_equal(
-            dist1.data, dist2.data
         )
 
 
@@ -252,7 +230,7 @@ class TestRPCAAxisLabels(unittest.TestCase):
             columns=['f%d' % i for i in range(15)]
         )
 
-        ordination, _ = rpca(table, n_components=3)
+        ordination = rpca(table, n_components=3)
 
         expected_labels = ['PC1', 'PC2', 'PC3']
         self.assertListEqual(list(ordination.eigvals.index), expected_labels)
