@@ -402,10 +402,13 @@ class BP:
             raise ValueError("Position must be an opening parenthesis")
         if i == 0:
             return -1  # Root has no enclosing node
-        result = self._bwdsearch(i - 1, -2)
-        if result == -1:
-            return -1
-        return result
+
+        # Find largest j < i where B[j] = 1 and excess[j] = excess[i] - 1
+        target_excess = self._excess[i] - 1
+        for j in range(i - 1, -1, -1):
+            if self._B[j] and self._excess[j] == target_excess:
+                return j
+        return -1
 
     def parent(self, i):
         """Return the position of the parent of node at position i.
@@ -870,11 +873,11 @@ class BP:
         BP
             A new BP tree with single-child nodes collapsed.
         """
-        # Identify single-child internal nodes
+        # Identify single-child internal nodes (excluding root)
         single_child = set()
         for i in range(self._size):
-            if self._B[i] and not self.isleaf(i):
-                # Check if single child
+            if self._B[i] and not self.isleaf(i) and i != 0:
+                # Check if single child (not root)
                 first = self.fchild(i)
                 if first >= 0 and self.nsibling(first) == -1:
                     single_child.add(i)
@@ -1106,47 +1109,34 @@ def write_newick(bp, include_lengths=True):
     >>> write_newick(bp)
     '((a:1.0,b:2.0)c:3.0,d:4.0)root;'
     """
-    result = []
-    stack = []
-
-    i = 0
-    while i < bp.size:
-        if bp.B[i]:  # Opening
-            if not bp.isleaf(i):
-                result.append('(')
-                stack.append(i)
+    def _format_node(pos):
+        """Format a node's name and length."""
+        parts = []
+        name = bp.name(pos)
+        length = bp.length(pos)
+        if name is not None:
+            if any(c in str(name) for c in '():,;'):
+                parts.append(f"'{name}'")
             else:
-                # Leaf
-                name = bp.name(i)
-                length = bp.length(i)
-                if name is not None:
-                    # Quote if needed
-                    if any(c in str(name) for c in '():,;'):
-                        result.append(f"'{name}'")
-                    else:
-                        result.append(str(name))
-                if include_lengths and length is not None:
-                    result.append(f':{length}')
-            i += 1
-        else:  # Closing
-            if stack:
-                open_pos = stack.pop()
-                # Check if we just closed an internal node
-                result.append(')')
-                name = bp.name(open_pos)
-                length = bp.length(open_pos)
-                if name is not None:
-                    if any(c in str(name) for c in '():,;'):
-                        result.append(f"'{name}'")
-                    else:
-                        result.append(str(name))
-                if include_lengths and length is not None:
-                    result.append(f':{length}')
+                parts.append(str(name))
+        if include_lengths and length is not None:
+            parts.append(f':{length}')
+        return ''.join(parts)
 
-            # Check if next is opening (sibling) or closing
-            i += 1
-            if i < bp.size and bp.B[i] and stack:
-                result.append(',')
+    def _write_subtree(pos):
+        """Recursively write a subtree starting at position pos."""
+        if bp.isleaf(pos):
+            return _format_node(pos)
 
-    result.append(';')
-    return ''.join(result)
+        # Internal node - gather children
+        children = []
+        child_pos = bp.fchild(pos)
+        while child_pos >= 0:
+            children.append(_write_subtree(child_pos))
+            child_pos = bp.nsibling(child_pos)
+
+        # Format as (children)name:length
+        result = '(' + ','.join(children) + ')' + _format_node(pos)
+        return result
+
+    return _write_subtree(0) + ';'
