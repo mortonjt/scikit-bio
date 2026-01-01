@@ -614,6 +614,7 @@ from ._exception import (
 
 __all__ = [
     "TreeNode",
+    "FastTreeNode",
     "upgma",
     "nj",
     "gme",

@@ -25,7 +25,6 @@ The key differences from ``TreeNode`` are:
 import numpy as np
 
 from skbio._base import SkbioObject
-from skbio.util._decorator import experimental
 from ._bp import BP, parse_newick, write_newick
 from ._exception import NoLengthError, NoParentError, MissingNodeError
 
@@ -81,7 +80,6 @@ class FastTreeNode(SkbioObject):
 
     default_write_format = 'newick'
 
-    @experimental(as_of="0.4.1")
     def __init__(self, bp=None, pos=0, name=None, length=None):
         if bp is None:
             # Create a simple single-node tree
@@ -105,7 +103,6 @@ class FastTreeNode(SkbioObject):
         """Return the branch length from this node to its parent."""
         return self._bp.length(self._pos)
 
-    @experimental(as_of="0.4.1")
     def __repr__(self):
         """Return summary of the tree.
 
@@ -139,7 +136,6 @@ class FastTreeNode(SkbioObject):
                 count += 1
         return count
 
-    @experimental(as_of="0.4.1")
     def __str__(self):
         """Return Newick string representation.
 
@@ -171,19 +167,16 @@ class FastTreeNode(SkbioObject):
         new_lengths = self._bp._lengths[self._pos:close + 1].copy()
         return BP(new_B, names=new_names, lengths=new_lengths)
 
-    @experimental(as_of="0.4.1")
     def __eq__(self, other):
         """Check equality based on position in same tree."""
         if not isinstance(other, FastTreeNode):
             return False
         return (self._bp is other._bp and self._pos == other._pos)
 
-    @experimental(as_of="0.4.1")
     def __hash__(self):
         """Hash based on position."""
         return hash((id(self._bp), self._pos))
 
-    @experimental(as_of="0.4.1")
     def is_tip(self):
         """Return True if the node is a tip (leaf).
 
@@ -204,7 +197,6 @@ class FastTreeNode(SkbioObject):
         """
         return self._bp.isleaf(self._pos)
 
-    @experimental(as_of="0.4.1")
     def is_root(self):
         """Return True if the node is the root.
 
@@ -225,7 +217,6 @@ class FastTreeNode(SkbioObject):
         """
         return self._pos == 0
 
-    @experimental(as_of="0.4.1")
     def has_children(self):
         """Return True if the node has children.
 
@@ -292,7 +283,6 @@ class FastTreeNode(SkbioObject):
             child_pos = self._bp.nsibling(child_pos)
         return children
 
-    @experimental(as_of="0.4.1")
     def root(self):
         """Return the root of the tree.
 
@@ -311,7 +301,6 @@ class FastTreeNode(SkbioObject):
         """
         return FastTreeNode(self._bp, 0)
 
-    @experimental(as_of="0.4.1")
     def ancestors(self):
         """Return all ancestors back to the root.
 
@@ -335,7 +324,6 @@ class FastTreeNode(SkbioObject):
             current = current.parent
         return result
 
-    @experimental(as_of="0.4.1")
     def siblings(self):
         """Return all sibling nodes.
 
@@ -358,7 +346,6 @@ class FastTreeNode(SkbioObject):
         parent = self.parent
         return [c for c in parent.children if c._pos != self._pos]
 
-    @experimental(as_of="0.4.1")
     def neighbors(self, ignore=None):
         """Return all connected nodes.
 
@@ -386,7 +373,6 @@ class FastTreeNode(SkbioObject):
             return nodes
         return [n for n in nodes if n != ignore]
 
-    @experimental(as_of="0.4.1")
     def depth(self):
         """Return the depth of this node.
 
@@ -405,9 +391,8 @@ class FastTreeNode(SkbioObject):
         >>> tree.find('a').depth()
         2
         """
-        return self._bp.depth(self._pos)
+        return int(self._bp.depth(self._pos))
 
-    @experimental(as_of="0.4.1")
     def height(self):
         """Return the height of the subtree.
 
@@ -426,9 +411,8 @@ class FastTreeNode(SkbioObject):
         >>> tree.find('a').height()
         0
         """
-        return self._bp.height(self._pos)
+        return int(self._bp.height(self._pos))
 
-    @experimental(as_of="0.4.1")
     def count(self, tips=False):
         """Return the number of nodes in the subtree.
 
@@ -453,10 +437,9 @@ class FastTreeNode(SkbioObject):
         3
         """
         if tips:
-            return self._count_tips_in_subtree()
-        return self._bp.subtree(self._pos)
+            return int(self._count_tips_in_subtree())
+        return int(self._bp.subtree(self._pos))
 
-    @experimental(as_of="0.4.1")
     def preorder(self, include_self=True):
         """Iterate over nodes in preorder.
 
@@ -484,7 +467,6 @@ class FastTreeNode(SkbioObject):
                 if include_self or i != self._pos:
                     yield FastTreeNode(self._bp, i)
 
-    @experimental(as_of="0.4.1")
     def postorder(self, include_self=True):
         """Iterate over nodes in postorder.
 
@@ -515,7 +497,6 @@ class FastTreeNode(SkbioObject):
                 if include_self or open_pos != self._pos:
                     yield FastTreeNode(self._bp, open_pos)
 
-    @experimental(as_of="0.4.1")
     def levelorder(self, include_self=True):
         """Iterate over nodes in level order (breadth-first).
 
@@ -544,7 +525,6 @@ class FastTreeNode(SkbioObject):
                 yield node
             queue.extend(node.children)
 
-    @experimental(as_of="0.4.1")
     def tips(self, include_self=False):
         """Iterate over tips in postorder.
 
@@ -570,7 +550,6 @@ class FastTreeNode(SkbioObject):
             if node.is_tip():
                 yield node
 
-    @experimental(as_of="0.4.1")
     def non_tips(self, include_self=False):
         """Iterate over non-tip nodes in postorder.
 
@@ -596,7 +575,6 @@ class FastTreeNode(SkbioObject):
             if not node.is_tip():
                 yield node
 
-    @experimental(as_of="0.4.1")
     def traverse(self, self_before=True, self_after=False, include_self=True):
         """Iterate over nodes depth-first.
 
@@ -646,7 +624,6 @@ class FastTreeNode(SkbioObject):
                     if include_self or open_pos != self._pos:
                         yield FastTreeNode(self._bp, open_pos)
 
-    @experimental(as_of="0.4.1")
     def find(self, name):
         """Find a node by name.
 
@@ -683,7 +660,6 @@ class FastTreeNode(SkbioObject):
 
         raise MissingNodeError(f"Node {name} is not in self")
 
-    @experimental(as_of="0.4.1")
     def find_all(self, name):
         """Find all nodes with a given name.
 
@@ -723,7 +699,6 @@ class FastTreeNode(SkbioObject):
 
         return result
 
-    @experimental(as_of="0.4.1")
     def find_by_func(self, func):
         """Find all nodes matching a function.
 
@@ -750,7 +725,6 @@ class FastTreeNode(SkbioObject):
             if func(node):
                 yield node
 
-    @experimental(as_of="0.4.1")
     def lowest_common_ancestor(self, tipnames):
         """Find the lowest common ancestor of given tips.
 
@@ -789,7 +763,6 @@ class FastTreeNode(SkbioObject):
 
     lca = lowest_common_ancestor
 
-    @experimental(as_of="0.4.1")
     def subset(self):
         """Return the set of tip names descending from this node.
 
@@ -808,7 +781,6 @@ class FastTreeNode(SkbioObject):
         """
         return frozenset({tip.name for tip in self.tips(include_self=True)})
 
-    @experimental(as_of="0.4.1")
     def distance(self, other):
         """Return the distance between self and other.
 
@@ -858,9 +830,8 @@ class FastTreeNode(SkbioObject):
             dist += current.length
             current = current.parent
 
-        return dist
+        return float(dist)
 
-    @experimental(as_of="0.4.1")
     def accumulate_to_ancestor(self, ancestor):
         """Return the sum of distances between self and ancestor.
 
@@ -898,9 +869,8 @@ class FastTreeNode(SkbioObject):
                 raise NoLengthError(f"No length on node {current.name}")
             accum += current.length
             current = current.parent
-        return accum
+        return float(accum)
 
-    @experimental(as_of="0.4.1")
     def shear(self, names):
         """Return a new tree with only the specified tips.
 
@@ -948,7 +918,6 @@ class FastTreeNode(SkbioObject):
 
         return FastTreeNode(new_bp)
 
-    @experimental(as_of="0.4.1")
     def copy(self):
         """Return a copy of the tree.
 
@@ -973,7 +942,6 @@ class FastTreeNode(SkbioObject):
         )
         return FastTreeNode(new_bp, self._pos)
 
-    @experimental(as_of="0.4.1")
     def ascii_art(self, show_internal=True, compact=False):
         """Return ASCII art representation of the tree.
 
@@ -1043,7 +1011,6 @@ class FastTreeNode(SkbioObject):
         return str(name)
 
     @classmethod
-    @experimental(as_of="0.4.1")
     def read(cls, fp, format='newick', **kwargs):
         """Read a tree from a file.
 
@@ -1079,7 +1046,6 @@ class FastTreeNode(SkbioObject):
         bp = parse_newick(data)
         return cls(bp)
 
-    @experimental(as_of="0.4.1")
     def write(self, fp, format='newick', **kwargs):
         """Write the tree to a file.
 
@@ -1112,7 +1078,6 @@ class FastTreeNode(SkbioObject):
                 f.write(newick_str)
 
     @classmethod
-    @experimental(as_of="0.4.1")
     def from_tree_node(cls, tree_node):
         """Create a FastTreeNode from a TreeNode.
 
@@ -1142,6 +1107,8 @@ class FastTreeNode(SkbioObject):
         lengths = []
 
         # Traverse and build BP
+        # Note: traverse with self_before=True, self_after=True visits internal
+        # nodes twice (before and after children) but tips only once.
         for node in tree_node.traverse(self_before=True, self_after=True,
                                        include_self=True):
             if not hasattr(node, '_bp_visited'):
@@ -1151,8 +1118,14 @@ class FastTreeNode(SkbioObject):
                 names.append(node.name)
                 length = node.length if node.length is not None else np.nan
                 lengths.append(length)
+
+                # Tips are only visited once, so add closing paren immediately
+                if node.is_tip():
+                    B.append(0)
+                    names.append(None)
+                    lengths.append(np.nan)
             else:
-                # Second visit - closing parenthesis
+                # Second visit - closing parenthesis (internal nodes only)
                 B.append(0)
                 names.append(None)
                 lengths.append(np.nan)

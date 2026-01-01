@@ -407,7 +407,8 @@ class TestParseNewick(unittest.TestCase):
         bp = parse_newick("(('a:1',b)c);")
         self.assertEqual(bp.numnodes(), 4)
         # The quoted name should be preserved
-        self.assertEqual(bp.name(bp.preorderselect(2)), 'a:1')
+        # preorderselect is 1-indexed: 1=root, 2=c, 3='a:1', 4=b
+        self.assertEqual(bp.name(bp.preorderselect(3)), 'a:1')
 
     def test_multifurcating_tree(self):
         """Test parsing a multifurcating tree."""

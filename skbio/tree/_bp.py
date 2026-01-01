@@ -129,10 +129,10 @@ class BP:
     --------
     >>> import numpy as np
     >>> from skbio.tree._bp import BP
-    >>> # Simple tree: ((a, b)c)root
-    >>> B = np.array([1, 1, 1, 0, 1, 0, 0, 1, 0, 0], dtype=np.uint8)
-    >>> names = np.array(['root', 'c', 'a', None, 'b', None,
-    ...                   None, None, None, None], dtype=object)
+    >>> # Simple tree: ((a, b)c)root - 4 nodes: root, c, a, b
+    >>> B = np.array([1, 1, 1, 0, 1, 0, 0, 0], dtype=np.uint8)
+    >>> names = np.array(['root', 'c', 'a', None, 'b', None, None, None],
+    ...                   dtype=object)
     >>> bp = BP(B, names=names)
     >>> bp.ntips()
     2
