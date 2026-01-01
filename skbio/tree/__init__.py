@@ -25,6 +25,7 @@ methods to achieve various tasks for tree analysis and manipulation.
    :template: TreeNode.rst
 
     TreeNode
+    FastTreeNode
 
 
 Tree Construction
@@ -598,6 +599,7 @@ Likewise, we can calculate this metric between multiple trees using :func:`path_
 
 from ._tree import TreeNode
 from ._upgma import upgma
+from ._fast_tree import FastTreeNode
 from ._nj import nj
 from ._me import gme, bme, nni
 from ._majority_rule import majority_rule
