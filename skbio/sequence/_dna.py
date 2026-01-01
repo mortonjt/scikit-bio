@@ -3,21 +3,17 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import skbio
 from skbio.util._decorator import classproperty, overrides
-from skbio.util._decorator import stable
 from ._nucleotide_mixin import NucleotideMixin, _motifs as _parent_motifs
-from ._grammared_sequence import GrammaredSequence, DisableSubclassingMeta
+from ._grammared_sequence import GrammaredSequence
 
 
-class DNA(GrammaredSequence, NucleotideMixin,
-          metaclass=DisableSubclassingMeta):
+class DNA(GrammaredSequence, NucleotideMixin):
     r"""Store DNA sequence data and optional associated metadata.
-
-    Only characters in the IUPAC DNA character set [1]_ are supported.
 
     Parameters
     ----------
@@ -58,10 +54,61 @@ class DNA(GrammaredSequence, NucleotideMixin,
 
     Notes
     -----
-    Subclassing is disabled for DNA, because subclassing makes
-    it possible to change the alphabet, and certain methods rely on the
-    IUPAC alphabet. If a custom sequence alphabet is needed, inherit directly
-    from ``GrammaredSequence``.
+    According to the IUPAC DNA character set [1]_ , a DNA sequence may contain
+    the following four definite characters (canonical nucleotides):
+
+    +-----+-----------+
+    |Code |Nucleobase |
+    +=====+===========+
+    |``A``|Adenine    |
+    +-----+-----------+
+    |``C``|Cytosine   |
+    +-----+-----------+
+    |``G``|Guanine    |
+    +-----+-----------+
+    |``T``|Thymine    |
+    +-----+-----------+
+
+    And the following 11 degenerate characters, each of which representing 2-4
+    nucleotides:
+
+    +-----+-------------+-----------+
+    |Code |Nucleobases  |Meaning    |
+    +=====+=============+===========+
+    |``R``|A or G       |Purine     |
+    +-----+-------------+-----------+
+    |``Y``|C or T       |Pyrimidine |
+    +-----+-------------+-----------+
+    |``S``|G or C       |Strong     |
+    +-----+-------------+-----------+
+    |``W``|A or T       |Weak       |
+    +-----+-------------+-----------+
+    |``K``|G or T       |Keto       |
+    +-----+-------------+-----------+
+    |``M``|A or C       |Amino      |
+    +-----+-------------+-----------+
+    |``B``|C, G or T    |Not A      |
+    +-----+-------------+-----------+
+    |``D``|A, G or T    |Not C      |
+    +-----+-------------+-----------+
+    |``H``|A, C or T    |Not G      |
+    +-----+-------------+-----------+
+    |``V``|A, C or G    |Not T      |
+    +-----+-------------+-----------+
+    |``N``|A, C, G or T |Any        |
+    +-----+-------------+-----------+
+
+    Plus two gap characters: ``-`` and ``.``.
+
+    Characters other than the above 17 are not allowed. If you intend to use
+    additional characters to represent non-canonical nucleobases, such as ``I``
+    (Inosine), you may create a custom alphabet using ``GrammaredSequence``.
+    Directly modifying the alphabet of ``DNA`` may break methods that rely on
+    the IUPAC alphabet.
+
+    It should be noted that some functions do not support degenerate characters
+    characters. In such cases, they will be replaced with `N` to represent any
+    of the canonical nucleotides.
 
     References
     ----------
@@ -105,9 +152,21 @@ class DNA(GrammaredSequence, NucleotideMixin,
     @overrides(NucleotideMixin)
     def complement_map(cls):
         comp_map = {
-            'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'Y': 'R', 'R': 'Y',
-            'S': 'S', 'W': 'W', 'K': 'M', 'M': 'K', 'B': 'V', 'D': 'H',
-            'H': 'D', 'V': 'B', 'N': 'N'
+            "A": "T",
+            "T": "A",
+            "G": "C",
+            "C": "G",
+            "Y": "R",
+            "R": "Y",
+            "S": "S",
+            "W": "W",
+            "K": "M",
+            "M": "K",
+            "B": "V",
+            "D": "H",
+            "H": "D",
+            "V": "B",
+            "N": "N",
         }
 
         comp_map.update({c: c for c in cls.gap_chars})
@@ -122,26 +181,38 @@ class DNA(GrammaredSequence, NucleotideMixin,
     @overrides(GrammaredSequence)
     def degenerate_map(cls):
         return {
-            "R": set("AG"), "Y": set("CT"), "M": set("AC"), "K": set("TG"),
-            "W": set("AT"), "S": set("GC"), "B": set("CGT"), "D": set("AGT"),
-            "H": set("ACT"), "V": set("ACG"), "N": set("ACGT")
+            "R": set("AG"),
+            "Y": set("CT"),
+            "M": set("AC"),
+            "K": set("TG"),
+            "W": set("AT"),
+            "S": set("GC"),
+            "B": set("CGT"),
+            "D": set("AGT"),
+            "H": set("ACT"),
+            "V": set("ACG"),
+            "N": set("ACGT"),
         }
 
     @classproperty
     @overrides(GrammaredSequence)
     def default_gap_char(cls):
-        return '-'
+        return "-"
 
     @classproperty
     @overrides(GrammaredSequence)
     def gap_chars(cls):
-        return set('-.')
+        return set("-.")
+
+    @classproperty
+    @overrides(GrammaredSequence)
+    def wildcard_char(cls):
+        return "N"
 
     @property
     def _motifs(self):
         return _motifs
 
-    @stable(as_of="0.4.0")
     def transcribe(self):
         """Transcribe DNA into RNA.
 
@@ -193,7 +264,7 @@ class DNA(GrammaredSequence, NucleotideMixin,
         0 UAACGUUA
 
         """
-        seq = self._string.replace(b'T', b'U')
+        seq = self._string.replace(b"T", b"U")
 
         metadata = None
         if self.has_metadata():
@@ -208,12 +279,14 @@ class DNA(GrammaredSequence, NucleotideMixin,
             interval_metadata = self.interval_metadata
 
         # turn off validation because `seq` is guaranteed to be valid
-        return skbio.RNA(seq, metadata=metadata,
-                         positional_metadata=positional_metadata,
-                         interval_metadata=interval_metadata,
-                         validate=False)
+        return skbio.RNA(
+            seq,
+            metadata=metadata,
+            positional_metadata=positional_metadata,
+            interval_metadata=interval_metadata,
+            validate=False,
+        )
 
-    @stable(as_of="0.4.0")
     def translate(self, *args, **kwargs):
         """Translate DNA sequence into protein sequence.
 
@@ -282,7 +355,6 @@ class DNA(GrammaredSequence, NucleotideMixin,
         """
         return self.transcribe().translate(*args, **kwargs)
 
-    @stable(as_of="0.4.0")
     def translate_six_frames(self, *args, **kwargs):
         """Translate DNA into protein using six possible reading frames.
 
@@ -413,7 +485,7 @@ class DNA(GrammaredSequence, NucleotideMixin,
     def _repr_stats(self):
         """Define custom statistics to display in the sequence's repr."""
         stats = super(DNA, self)._repr_stats()
-        stats.append(('GC-content', '{:.2%}'.format(self.gc_content())))
+        stats.append(("GC-content", "{:.2%}".format(self.gc_content())))
         return stats
 
 

@@ -3,21 +3,17 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
 
 from skbio.util._decorator import classproperty, overrides
-from skbio.util._decorator import stable
-from ._grammared_sequence import (GrammaredSequence, DisableSubclassingMeta,
-                                  _motifs as parent_motifs)
+from ._grammared_sequence import GrammaredSequence, _motifs as parent_motifs
 
 
-class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
+class Protein(GrammaredSequence):
     r"""Store protein sequence data and optional associated metadata.
-
-    Only characters in the IUPAC protein character set [1]_ are supported.
 
     Parameters
     ----------
@@ -56,10 +52,80 @@ class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
 
     Notes
     -----
-    Subclassing is disabled for Protein, because subclassing makes
-    it possible to change the alphabet, and certain methods rely on the
-    IUPAC alphabet. If a custom sequence alphabet is needed, inherit directly
-    from ``GrammaredSequence``.
+    According to the IUPAC notation [1]_ , a protein sequence may contain the
+    following 20 definite characters (canonical amino acids):
+
+    +-----+---------+--------------+
+    |Code |3-letter |Amino acid    |
+    +=====+=========+==============+
+    |``A``|Ala      |Alanine       |
+    +-----+---------+--------------+
+    |``C``|Cys      |Cysteine      |
+    +-----+---------+--------------+
+    |``D``|Asp      |Aspartic acid |
+    +-----+---------+--------------+
+    |``E``|Glu      |Glutamic acid |
+    +-----+---------+--------------+
+    |``F``|Phe      |Phenylalanine |
+    +-----+---------+--------------+
+    |``G``|Gly      |Glycine       |
+    +-----+---------+--------------+
+    |``H``|His      |Histidine     |
+    +-----+---------+--------------+
+    |``I``|Ile      |Isoleucine    |
+    +-----+---------+--------------+
+    |``K``|Lys      |Lysine        |
+    +-----+---------+--------------+
+    |``L``|Leu      |Leucine       |
+    +-----+---------+--------------+
+    |``M``|Met      |Methionine    |
+    +-----+---------+--------------+
+    |``N``|Asn      |Asparagine    |
+    +-----+---------+--------------+
+    |``P``|Pro      |Proline       |
+    +-----+---------+--------------+
+    |``Q``|Gln      |Glutamine     |
+    +-----+---------+--------------+
+    |``R``|Arg      |Arginine      |
+    +-----+---------+--------------+
+    |``S``|Ser      |Serine        |
+    +-----+---------+--------------+
+    |``T``|Thr      |Threonine     |
+    +-----+---------+--------------+
+    |``V``|Val      |Valine        |
+    +-----+---------+--------------+
+    |``W``|Trp      |Tryptophan    |
+    +-----+---------+--------------+
+    |``Y``|Tyr      |Tyrosine      |
+    +-----+---------+--------------+
+
+    And the following four degenerate characters, each of which representing
+    two or more amino acids:
+
+    +-----+---------+------------+
+    |Code |3-letter |Amino acids |
+    +=====+=========+============+
+    |``B``|Asx      |D or N      |
+    +-----+---------+------------+
+    |``Z``|Glx      |E or Q      |
+    +-----+---------+------------+
+    |``J``|Xle      |I or L      |
+    +-----+---------+------------+
+    |``X``|Xaa      |All 20      |
+    +-----+---------+------------+
+
+    Plus one stop character: ``*`` (Ter), and two gap characters: ``-`` and ``.``.
+
+    Characters other than the above 27 are not allowed. If you intend to use
+    additional characters to represent non-canonical amino acids, such as ``U``
+    (Sec, Selenocysteine) and ``O`` (Pyl, Pyrrolysine), you may create a custom
+    alphabet using ``GrammaredSequence``. Directly modifying the alphabet of
+    ``Protein`` may break functions that rely on the IUPAC alphabet.
+
+    It should be noted that some functions do not support certain characters.
+    For example, the BLOSUM and PAM substitution matrices do not support ``J``
+    (Xle). In such circumstances, unsupported characters will be replaced with
+    ``X`` to represent any of the canonical amino acids.
 
     References
     ----------
@@ -98,6 +164,7 @@ class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
     0 PAW
 
     """
+
     __stop_codes = None
 
     @classproperty
@@ -115,18 +182,24 @@ class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
     @classproperty
     @overrides(GrammaredSequence)
     def definite_chars(cls):
-        return set("ACDEFGHIKLMNPQRSTVWY")
+        return set("ACDEFGHIKLMNOPQRSTUVWY")
+
+    @classproperty
+    @overrides(GrammaredSequence)
+    def noncanonical_chars(cls):
+        return set("OU")
 
     @classproperty
     @overrides(GrammaredSequence)
     def degenerate_map(cls):
         return {
-            "B": set("DN"), "Z": set("EQ"),
-            "X": set("ACDEFGHIKLMNPQRSTVWY")
+            "B": set("DN"),
+            "Z": set("EQ"),
+            "J": set("IL"),
+            "X": set("ACDEFGHIKLMNOPQRSTUVWY"),
         }
 
     @classproperty
-    @stable(as_of="0.4.0")
     def stop_chars(cls):
         """Return characters representing translation stop codons.
 
@@ -136,23 +209,27 @@ class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
             Characters representing translation stop codons.
 
         """
-        return set('*')
+        return set("*")
 
     @classproperty
     @overrides(GrammaredSequence)
     def gap_chars(cls):
-        return set('-.')
+        return set("-.")
 
     @classproperty
     @overrides(GrammaredSequence)
     def default_gap_char(cls):
-        return '-'
+        return "-"
+
+    @classproperty
+    @overrides(GrammaredSequence)
+    def wildcard_char(cls):
+        return "X"
 
     @property
     def _motifs(self):
         return _motifs
 
-    @stable(as_of="0.4.0")
     def stops(self):
         """Find positions containing stop characters in the protein sequence.
 
@@ -179,7 +256,6 @@ class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
         """
         return np.in1d(self._bytes, self._stop_codes)
 
-    @stable(as_of="0.4.0")
     def has_stops(self):
         """Determine if the sequence contains one or more stop characters.
 
@@ -206,7 +282,7 @@ class Protein(GrammaredSequence, metaclass=DisableSubclassingMeta):
     def _repr_stats(self):
         """Define custom statistics to display in the sequence's repr."""
         stats = super(Protein, self)._repr_stats()
-        stats.append(('has stops', '%r' % self.has_stops()))
+        stats.append(("has stops", "%r" % self.has_stops()))
         return stats
 
 
@@ -215,7 +291,7 @@ _motifs = parent_motifs.copy()
 
 @_motifs("N-glycosylation")
 def _motif_nitro_glycosylation(sequence, min_length, ignore):
-    """Identifies N-glycosylation runs"""
+    """Identify N-glycosylation runs."""
     return sequence.find_with_regex("(N[^PX][ST][^PX])", ignore=ignore)
 
 

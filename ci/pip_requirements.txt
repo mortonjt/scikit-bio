@@ -1,9 +1,0 @@
-HTTPretty >= 0.8.14
-coveralls
-natsort
-lockfile
-CacheControl
-Sphinx
-sphinx-bootstrap-theme
-check-manifest
-hdmedians

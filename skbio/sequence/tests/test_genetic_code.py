@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import itertools
@@ -72,8 +72,8 @@ class TestGeneticCode(unittest.TestCase):
 
     def test_init_invalid_input(self):
         # `amino_acids` invalid protein
-        with self.assertRaisesRegex(ValueError, r'Invalid character.*J'):
-            GeneticCode('J' * 64, '-' * 64)
+        with self.assertRaisesRegex(ValueError, r'Invalid character.*&'):
+            GeneticCode('&' * 64, '-' * 64)
 
         # wrong number of amino acids
         with self.assertRaisesRegex(ValueError, r'amino_acids.*64.*42'):
@@ -84,8 +84,8 @@ class TestGeneticCode(unittest.TestCase):
             GeneticCode('A' * 64, '-' * 64)
 
         # `starts` invalid protein
-        with self.assertRaisesRegex(ValueError, r'Invalid character.*J'):
-            GeneticCode('M' * 64, 'J' * 64)
+        with self.assertRaisesRegex(ValueError, r'Invalid character.*&'):
+            GeneticCode('M' * 64, '&' * 64)
 
         # wrong number of starts
         with self.assertRaisesRegex(ValueError, r'starts.*64.*42'):

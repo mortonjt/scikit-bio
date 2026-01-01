@@ -3,24 +3,40 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import functools
 from unittest import TestCase, main
+import copy
+
 import numpy as np
 import numpy.testing as npt
-import pandas.util.testing as pdt
 from numpy.random import normal
 import pandas as pd
-import scipy
-import copy
+import pandas.testing as pdt
+from scipy.sparse import coo_matrix
+from scipy.stats import f_oneway
+
+from skbio import TreeNode
 from skbio.util import assert_data_frame_almost_equal
-from skbio.stats.composition import (closure, multiplicative_replacement,
-                                     perturb, perturb_inv, power, inner,
-                                     clr, clr_inv, ilr, ilr_inv, alr, alr_inv,
-                                     sbp_basis, _gram_schmidt_basis,
-                                     centralize, _holm_bonferroni, ancom)
+from skbio.stats.distance import DistanceMatrixError
+from skbio.stats.composition import (
+    closure, multi_replace, multiplicative_replacement, perturb, perturb_inv, power,
+    inner, clr, clr_inv, ilr, ilr_inv, alr, alr_inv, sbp_basis, _gram_schmidt_basis,
+    centralize, _holm_bonferroni, _benjamini_hochberg, _dispatch_p_adjust, ancom,
+    vlr, pairwise_vlr, tree_basis, dirmult_ttest)
+
+
+def assert_coo_allclose(res, exp, rtol=1e-7, atol=1e-7):
+    res_data = np.vstack((res.row, res.col, res.data)).T
+    exp_data = np.vstack((exp.row, exp.col, exp.data)).T
+
+    # sort by row and col
+    res_data = res_data[res_data[:, 1].argsort()]
+    res_data = res_data[res_data[:, 0].argsort()]
+    exp_data = exp_data[exp_data[:, 1].argsort()]
+    exp_data = exp_data[exp_data[:, 0].argsort()]
+    npt.assert_allclose(res_data, exp_data, rtol=rtol, atol=atol)
 
 
 class CompositionTests(TestCase):
@@ -187,8 +203,8 @@ class CompositionTests(TestCase):
                             np.array([[2, 2, 6],
                                       [4, 4, 2]]))
 
-    def test_multiplicative_replacement(self):
-        amat = multiplicative_replacement(closure(self.cdata3))
+    def test_multi_replace(self):
+        amat = multi_replace(closure(self.cdata3))
         npt.assert_allclose(amat,
                             np.array([[0.087273, 0.174545, 0.261818,
                                        0.04, 0.436364],
@@ -197,13 +213,13 @@ class CompositionTests(TestCase):
                                        0.266667, 0.333333]]),
                             rtol=1e-5, atol=1e-5)
 
-        amat = multiplicative_replacement(closure(self.cdata4))
+        amat = multi_replace(closure(self.cdata4))
         npt.assert_allclose(amat,
                             np.array([0.087273, 0.174545, 0.261818,
                                       0.04, 0.436364]),
                             rtol=1e-5, atol=1e-5)
 
-        amat = multiplicative_replacement(closure(self.cdata6))
+        amat = multi_replace(closure(self.cdata6))
         npt.assert_allclose(amat,
                             np.array([[0.087273, 0.174545, 0.261818,
                                        0.04, 0.436364],
@@ -213,17 +229,21 @@ class CompositionTests(TestCase):
                             rtol=1e-5, atol=1e-5)
 
         with self.assertRaises(ValueError):
-            multiplicative_replacement(self.bad1)
+            multi_replace(self.bad1)
         with self.assertRaises(ValueError):
-            multiplicative_replacement(self.bad2)
+            multi_replace(self.bad2)
 
         # make sure that inplace modification is not occurring
-        multiplicative_replacement(self.cdata4)
+        multi_replace(self.cdata4)
         npt.assert_allclose(self.cdata4, np.array([1, 2, 3, 0, 5]))
 
-    def multiplicative_replacement_warning(self):
+    def multi_replace_warning(self):
         with self.assertRaises(ValueError):
-            multiplicative_replacement([0, 1, 2], delta=1)
+            multi_replace([0, 1, 2], delta=1)
+
+    def test_multiplicative_replacement(self):
+        mat = closure(self.cdata3)
+        npt.assert_allclose(multiplicative_replacement(mat), multi_replace(mat))
 
     def test_clr(self):
         cmat = clr(closure(self.cdata1))
@@ -256,7 +276,8 @@ class CompositionTests(TestCase):
 
     def test_clr_inv(self):
         npt.assert_allclose(clr_inv(self.rdata1), self.ortho1)
-        npt.assert_allclose(clr(clr_inv(self.rdata1)), self.rdata1)
+        npt.assert_allclose(clr(clr_inv(self.rdata1)), self.rdata1,
+                            rtol=1e-4, atol=1e-5)
 
         # make sure that inplace modification is not occurring
         clr_inv(self.rdata1)
@@ -297,6 +318,10 @@ class CompositionTests(TestCase):
         npt.assert_allclose(ilr(self.ortho1), np.identity(3),
                             rtol=1e-04, atol=1e-06)
 
+        # no check
+        npt.assert_array_almost_equal(ilr(mat, check=False),
+                                      np.array([0.70710678, 0.40824829]))
+
         with self.assertRaises(ValueError):
             ilr(self.cdata1, basis=self.cdata1)
 
@@ -312,13 +337,13 @@ class CompositionTests(TestCase):
                           [1.28282828, 9.81818182],
                           [1.42424242, 9.72727273],
                           [1.56565657, 9.63636364]])
-        basis = np.array([[0.80442968, 0.19557032]])
+        basis = np.atleast_2d(clr([[0.80442968, 0.19557032]]))
         res = ilr(table, basis=basis)
-        exp = np.array([np.log(1/10)*np.sqrt(1/2),
-                        np.log(1.14141414 / 9.90909091)*np.sqrt(1/2),
-                        np.log(1.28282828 / 9.81818182)*np.sqrt(1/2),
-                        np.log(1.42424242 / 9.72727273)*np.sqrt(1/2),
-                        np.log(1.56565657 / 9.63636364)*np.sqrt(1/2)])
+        exp = np.array([[np.log(1/10)*np.sqrt(1/2)],
+                        [np.log(1.14141414 / 9.90909091)*np.sqrt(1/2)],
+                        [np.log(1.28282828 / 9.81818182)*np.sqrt(1/2)],
+                        [np.log(1.42424242 / 9.72727273)*np.sqrt(1/2)],
+                        [np.log(1.56565657 / 9.63636364)*np.sqrt(1/2)]])
 
         npt.assert_allclose(res, exp)
 
@@ -339,6 +364,9 @@ class CompositionTests(TestCase):
         npt.assert_allclose(ilr_inv(np.identity(3)), self.ortho1,
                             rtol=1e-04, atol=1e-06)
 
+        # no check
+        npt.assert_array_almost_equal(ilr_inv(ilr(mat), check=False), mat)
+
         with self.assertRaises(ValueError):
             ilr_inv(self.cdata1, basis=self.cdata1)
 
@@ -351,14 +379,15 @@ class CompositionTests(TestCase):
     def test_ilr_basis_isomorphism(self):
         # tests to make sure that the isomorphism holds
         # with the introduction of the basis.
-        basis = np.array([[0.80442968, 0.19557032]])
+        basis = np.atleast_2d(clr([[0.80442968, 0.19557032]]))
         table = np.array([[np.log(1/10)*np.sqrt(1/2),
                            np.log(1.14141414 / 9.90909091)*np.sqrt(1/2),
                            np.log(1.28282828 / 9.81818182)*np.sqrt(1/2),
                            np.log(1.42424242 / 9.72727273)*np.sqrt(1/2),
                            np.log(1.56565657 / 9.63636364)*np.sqrt(1/2)]]).T
-        res = ilr(ilr_inv(table, basis=basis), basis=basis)
-        npt.assert_allclose(res, table.squeeze())
+        lr = ilr_inv(table, basis=basis)
+        res = ilr(lr, basis=basis)
+        npt.assert_allclose(res, table)
 
         table = np.array([[1., 10.],
                           [1.14141414, 9.90909091],
@@ -366,7 +395,7 @@ class CompositionTests(TestCase):
                           [1.42424242, 9.72727273],
                           [1.56565657, 9.63636364]])
 
-        res = ilr_inv(np.atleast_2d(ilr(table, basis=basis)).T, basis=basis)
+        res = ilr_inv(ilr(table, basis=basis), basis=basis)
         npt.assert_allclose(res, closure(table.squeeze()))
 
     def test_ilr_inv_basis(self):
@@ -375,17 +404,18 @@ class CompositionTests(TestCase):
                                 [1.28282828, 9.81818182],
                                 [1.42424242, 9.72727273],
                                 [1.56565657, 9.63636364]]))
-        basis = np.array([[0.80442968, 0.19557032]])
+        basis = np.atleast_2d(clr([[0.80442968, 0.19557032]]))
         table = np.array([[np.log(1/10)*np.sqrt(1/2),
                            np.log(1.14141414 / 9.90909091)*np.sqrt(1/2),
                            np.log(1.28282828 / 9.81818182)*np.sqrt(1/2),
                            np.log(1.42424242 / 9.72727273)*np.sqrt(1/2),
                            np.log(1.56565657 / 9.63636364)*np.sqrt(1/2)]]).T
+
         res = ilr_inv(table, basis=basis)
         npt.assert_allclose(res, exp)
 
     def test_ilr_inv_basis_one_dimension_error(self):
-        basis = clr(np.array([[0.80442968, 0.19557032]]))
+        basis = clr([0.80442968, 0.19557032])
         table = np.array([[np.log(1/10)*np.sqrt(1/2),
                            np.log(1.14141414 / 9.90909091)*np.sqrt(1/2),
                            np.log(1.28282828 / 9.81818182)*np.sqrt(1/2),
@@ -417,6 +447,10 @@ class CompositionTests(TestCase):
         # make sure that inplace modification is not occurring
         alr(self.cdata2)
         npt.assert_allclose(self.cdata2, np.array([2, 2, 6]))
+
+        # matrix must be 1d or 2d
+        with self.assertRaises(ValueError):
+            alr(np.atleast_3d(self.cdata2))
 
     def test_alr_inv(self):
         # 2d-composition
@@ -456,7 +490,7 @@ class CompositionTests(TestCase):
             alr_inv(self.bad2)
 
     def test_sbp_basis_gram_schmidt(self):
-        gsbasis = clr_inv(_gram_schmidt_basis(5))
+        gsbasis = _gram_schmidt_basis(5)
         sbp = np.array([[1, -1, 0, 0, 0],
                         [1, 1, -1, 0, 0],
                         [1, 1, 1, -1, 0],
@@ -489,8 +523,59 @@ class CompositionTests(TestCase):
                     psi[i, j] = np.sqrt(s[i]/(r[i]*(r[i]+s[i])))
                 elif sbp[i, j] == -1:
                     psi[i, j] = -np.sqrt(r[i]/(s[i]*(r[i]+s[i])))
-        basis_byhand = clr_inv(psi)
-        npt.assert_allclose(basis_byhand, sbpbasis)
+        npt.assert_allclose(psi, sbpbasis)
+
+
+class TestTreeBasis(TestCase):
+
+    def test_tree_basis_base_case(self):
+        tree = u"(a,b);"
+        t = TreeNode.read([tree])
+
+        exp_basis = coo_matrix(
+            np.array([[-np.sqrt(1. / 2),
+                       np.sqrt(1. / 2)]]))
+        exp_keys = [t.name]
+        res_basis, res_keys = tree_basis(t)
+
+        assert_coo_allclose(exp_basis, res_basis)
+        self.assertListEqual(exp_keys, res_keys)
+
+    def test_tree_basis_invalid(self):
+        with self.assertRaises(ValueError):
+            tree = u"(a,b,c);"
+            t = TreeNode.read([tree])
+            tree_basis(t)
+
+    def test_tree_basis_unbalanced(self):
+        tree = u"((a,b)c, d);"
+        t = TreeNode.read([tree])
+        exp_basis = coo_matrix(np.array(
+            [[-np.sqrt(1. / 6), -np.sqrt(1. / 6), np.sqrt(2. / 3)],
+             [-np.sqrt(1. / 2), np.sqrt(1. / 2), 0]]
+        ))
+        exp_keys = [t.name, t[0].name]
+        res_basis, res_keys = tree_basis(t)
+
+        assert_coo_allclose(exp_basis, res_basis)
+        self.assertListEqual(exp_keys, res_keys)
+
+    def test_tree_basis_unbalanced2(self):
+        tree = u"(d, (a,b)c);"
+
+        t = TreeNode.read([tree])
+
+        exp_basis = coo_matrix(np.array(
+            [
+                [-np.sqrt(2. / 3), np.sqrt(1. / 6), np.sqrt(1. / 6)],
+                [0, -np.sqrt(1. / 2), np.sqrt(1. / 2)]
+            ]
+        ))
+
+        exp_keys = [t.name, t[1].name]
+        res_basis, res_keys = tree_basis(t)
+        assert_coo_allclose(exp_basis, res_basis, atol=1e-7, rtol=1e-7)
+        self.assertListEqual(exp_keys, res_keys)
 
 
 class AncomTests(TestCase):
@@ -521,7 +606,7 @@ class AncomTests(TestCase):
                                  normal(10, 1, L),
                                  normal(10, 1, L)))
         self.table2 = np.absolute(self.table2)
-        self.table2 = pd.DataFrame(self.table2.astype(np.int).T)
+        self.table2 = pd.DataFrame(self.table2.astype(int).T)
         self.cats2 = pd.Series([0]*D + [1]*D)
 
         # Real valued data with 2 groupings and no significant difference
@@ -554,7 +639,7 @@ class AncomTests(TestCase):
                                  normal(10, 1, L),
                                  normal(10, 1, L)))
         self.table4 = np.absolute(self.table4)
-        self.table4 = pd.DataFrame(self.table4.astype(np.int).T)
+        self.table4 = pd.DataFrame(self.table4.astype(int).T)
         self.cats4 = pd.Series([0]*D + [1]*D + [2]*D)
 
         # Noncontiguous case
@@ -635,7 +720,7 @@ class AncomTests(TestCase):
                                  normal(10, 10, L),
                                  normal(10, 10, L)))
         self.table9 = np.absolute(self.table9)+1
-        self.table9 = pd.DataFrame(self.table9.astype(np.int).T)
+        self.table9 = pd.DataFrame(self.table9.astype(int).T)
         self.cats9 = pd.Series([0]*D + [1]*D + [2]*D)
 
         # Real valued data with 2 groupings
@@ -669,7 +754,7 @@ class AncomTests(TestCase):
                                   normal(10, 10, L),
                                   normal(10, 10, L)))
         self.table10 = np.absolute(self.table10) + 1
-        self.table10 = pd.DataFrame(self.table10.astype(np.int).T)
+        self.table10 = pd.DataFrame(self.table10.astype(int).T)
         self.cats10 = pd.Series([0]*D + [1]*D)
 
         # zero count
@@ -711,9 +796,7 @@ class AncomTests(TestCase):
         original_table = copy.deepcopy(test_table)
         test_cats = pd.Series(self.cats1)
         original_cats = copy.deepcopy(test_cats)
-        result = ancom(test_table,
-                       test_cats,
-                       multiple_comparisons_correction=None)
+        result = ancom(test_table, test_cats, p_adjust=None)
         # Test to make sure that the input table hasn't be altered
         assert_data_frame_almost_equal(original_table, test_table)
         # Test to make sure that the input table hasn't be altered
@@ -917,9 +1000,7 @@ class AncomTests(TestCase):
         original_table = copy.deepcopy(test_table)
         test_cats = pd.Series(self.cats1)
         original_cats = copy.deepcopy(test_cats)
-        result = ancom(test_table,
-                       test_cats,
-                       multiple_comparisons_correction=None)
+        result = ancom(test_table, test_cats, p_adjust=None)
         # Test to make sure that the input table hasn't be altered
         assert_data_frame_almost_equal(original_table, test_table)
         # Test to make sure that the input table hasn't be altered
@@ -949,9 +1030,7 @@ class AncomTests(TestCase):
         assert_data_frame_almost_equal(result[0], exp)
 
     def test_ancom_noncontiguous(self):
-        result = ancom(self.table5,
-                       self.cats5,
-                       multiple_comparisons_correction=None)
+        result = ancom(self.table5, self.cats5, p_adjust=None)
         exp = pd.DataFrame(
             {'W': np.array([6, 2, 2, 2, 2, 6, 2]),
              'Reject null hypothesis': np.array([True, False, False, False,
@@ -960,9 +1039,7 @@ class AncomTests(TestCase):
         assert_data_frame_almost_equal(result[0], exp)
 
     def test_ancom_unbalanced(self):
-        result = ancom(self.table6,
-                       self.cats6,
-                       multiple_comparisons_correction=None)
+        result = ancom(self.table6, self.cats6, p_adjust=None)
         exp = pd.DataFrame(
             {'W': np.array([5, 3, 3, 2, 2, 5, 2]),
              'Reject null hypothesis': np.array([True, False, False, False,
@@ -971,9 +1048,7 @@ class AncomTests(TestCase):
         assert_data_frame_almost_equal(result[0], exp)
 
     def test_ancom_letter_categories(self):
-        result = ancom(self.table7,
-                       self.cats7,
-                       multiple_comparisons_correction=None)
+        result = ancom(self.table7, self.cats7, p_adjust=None)
         exp = pd.DataFrame(
             {'W': np.array([5, 3, 3, 2, 2, 5, 2]),
              'Reject null hypothesis': np.array([True, False, False, False,
@@ -981,23 +1056,46 @@ class AncomTests(TestCase):
                                                 dtype=bool)})
         assert_data_frame_almost_equal(result[0], exp)
 
-    def test_ancom_multiple_comparisons(self):
-        significance_test = functools.partial(scipy.stats.mannwhitneyu,
-                                              alternative='two-sided')
-        result = ancom(self.table1,
-                       self.cats1,
-                       multiple_comparisons_correction='holm-bonferroni',
-                       significance_test=significance_test)
+    def test_ancom_significance_test_none(self):
         exp = pd.DataFrame(
-            {'W': np.array([0]*7),
-             'Reject null hypothesis': np.array([False]*7, dtype=bool)})
+            {'W': np.array([5, 5, 2, 2, 2, 2, 2]),
+             'Reject null hypothesis': np.array([True, True, False, False,
+                                                 False, False, False],
+                                                dtype=bool)})
+        result = ancom(self.table1, self.cats1, significance_test=None)
+        assert_data_frame_almost_equal(result[0], exp)
+
+    def test_ancom_significance_test_callable(self):
+        exp = pd.DataFrame(
+            {'W': np.array([5, 5, 2, 2, 2, 2, 2]),
+             'Reject null hypothesis': np.array([True, True, False, False,
+                                                 False, False, False],
+                                                dtype=bool)})
+        result = ancom(self.table1, self.cats1, significance_test=f_oneway)
+        assert_data_frame_almost_equal(result[0], exp)
+
+    def test_ancom_multiple_comparisons(self):
+        exp = pd.DataFrame(
+            {'W': np.array([0] * 7),
+             'Reject null hypothesis': np.array([False] * 7, dtype=bool)})
+        for method in 'holm', 'bh':
+            result = ancom(self.table1, self.cats1, p_adjust=method,
+                           significance_test='mannwhitneyu')
+            assert_data_frame_almost_equal(result[0], exp)
+
+    def test_ancom_multiple_comparisons_deprecated(self):
+        # @deprecated
+        exp = pd.DataFrame(
+            {'W': np.array([0] * 7),
+             'Reject null hypothesis': np.array([False] * 7, dtype=bool)})
+        result = ancom(self.table1, self.cats1,
+                       significance_test='mannwhitneyu',
+                       multiple_comparisons_correction=None)
         assert_data_frame_almost_equal(result[0], exp)
 
     def test_ancom_alternative_test(self):
-        result = ancom(self.table1,
-                       self.cats1,
-                       multiple_comparisons_correction=None,
-                       significance_test=scipy.stats.ttest_ind)
+        result = ancom(self.table1, self.cats1, p_adjust=None,
+                       significance_test="ttest_ind")
         exp = pd.DataFrame(
             {'W': np.array([5, 5, 2, 2, 2, 2, 2]),
              'Reject null hypothesis': np.array([True,  True, False, False,
@@ -1005,11 +1103,15 @@ class AncomTests(TestCase):
                                                 dtype=bool)})
         assert_data_frame_almost_equal(result[0], exp)
 
+    def test_ancom_incorrect_test(self):
+        with self.assertRaises(ValueError) as cm:
+            ancom(self.table1, self.cats1, significance_test="not_a_test")
+        msg = 'Function "not_a_test" does not exist under scipy.stats.'
+        self.assertEqual(str(cm.exception), msg)
+
     def test_ancom_normal_data(self):
-        result = ancom(self.table2,
-                       self.cats2,
-                       multiple_comparisons_correction=None,
-                       significance_test=scipy.stats.ttest_ind)
+        result = ancom(self.table2, self.cats2, p_adjust=None,
+                       significance_test="ttest_ind")
         exp = pd.DataFrame(
             {'W': np.array([8, 8, 3, 3, 8, 3, 3, 3, 3]),
              'Reject null hypothesis': np.array([True, True, False, False,
@@ -1028,9 +1130,7 @@ class AncomTests(TestCase):
         assert_data_frame_almost_equal(result[0], exp)
 
     def test_ancom_no_signal(self):
-        result = ancom(self.table3,
-                       self.cats3,
-                       multiple_comparisons_correction=None)
+        result = ancom(self.table3, self.cats3, p_adjust=None)
         exp = pd.DataFrame(
             {'W': np.array([0]*7),
              'Reject null hypothesis': np.array([False]*7, dtype=bool)})
@@ -1060,12 +1160,9 @@ class AncomTests(TestCase):
                                                  False, False, False, False,
                                                  False, False], dtype=bool)})
 
-        result1 = ancom(self.table4, self.cats4,
-                        multiple_comparisons_correction=None, tau=0.25)
-        result2 = ancom(self.table9, self.cats9,
-                        multiple_comparisons_correction=None, tau=0.02)
-        result3 = ancom(self.table10, self.cats10,
-                        multiple_comparisons_correction=None, tau=0.02)
+        result1 = ancom(self.table4, self.cats4, p_adjust=None, tau=0.25)
+        result2 = ancom(self.table9, self.cats9, p_adjust=None, tau=0.02)
+        result3 = ancom(self.table10, self.cats10, p_adjust=None, tau=0.02)
 
         assert_data_frame_almost_equal(result1[0], exp1)
         assert_data_frame_almost_equal(result2[0], exp2)
@@ -1081,8 +1178,7 @@ class AncomTests(TestCase):
         assert_data_frame_almost_equal(result[0], exp)
 
     def test_ancom_alpha(self):
-        result = ancom(self.table1, self.cats1,
-                       multiple_comparisons_correction=None, alpha=0.5)
+        result = ancom(self.table1, self.cats1, p_adjust=None, alpha=0.5)
         exp = pd.DataFrame(
             {'W': np.array([6, 6, 4, 5, 5, 4, 2]),
              'Reject null hypothesis': np.array([True, True, False, True,
@@ -1098,16 +1194,15 @@ class AncomTests(TestCase):
 
     def test_ancom_fail_zeros(self):
         with self.assertRaises(ValueError):
-            ancom(self.bad1, self.cats2, multiple_comparisons_correction=None)
+            ancom(self.bad1, self.cats2, p_adjust=None)
 
     def test_ancom_fail_negative(self):
         with self.assertRaises(ValueError):
-            ancom(self.bad2, self.cats2, multiple_comparisons_correction=None)
+            ancom(self.bad2, self.cats2, p_adjust=None)
 
-    def test_ancom_fail_not_implemented_multiple_comparisons_correction(self):
+    def test_ancom_fail_not_implemented_p_adjust(self):
         with self.assertRaises(ValueError):
-            ancom(self.table2, self.cats2,
-                  multiple_comparisons_correction='fdr')
+            ancom(self.table2, self.cats2, p_adjust='fdr')
 
     def test_ancom_fail_missing(self):
         with self.assertRaises(ValueError):
@@ -1151,16 +1246,252 @@ class AncomTests(TestCase):
             ancom(self.table1, self.cats1, alpha=1.1)
 
     def test_ancom_fail_multiple_groups(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises((TypeError, np.AxisError)):
             ancom(self.table4, self.cats4,
-                  significance_test=scipy.stats.ttest_ind)
+                  significance_test="ttest_ind")
 
+
+class FDRTests(TestCase):
     def test_holm_bonferroni(self):
         p = [0.005, 0.011, 0.02, 0.04, 0.13]
-        corrected_p = p * np.arange(1, 6)[::-1]
-        guessed_p = _holm_bonferroni(p)
-        for a, b in zip(corrected_p, guessed_p):
+        obs = _holm_bonferroni(p)
+        exp = p * np.arange(1, 6)[::-1]
+        for a, b in zip(obs, exp):
             self.assertAlmostEqual(a, b)
+
+    def test_benjamini_hochberg(self):
+        p = [0.005, 0.011, 0.02, 0.04, 0.13]
+        obs = _benjamini_hochberg(p)
+        exp = [0.025, 0.0275, 0.03333333, 0.05, 0.13]
+        for a, b in zip(obs, exp):
+            self.assertAlmostEqual(a, b)
+
+    def test_dispatch_p_adjust(self):
+        self.assertIsNone(_dispatch_p_adjust(None))
+        self.assertEqual(_dispatch_p_adjust(
+            "holm-bonferroni").__name__, "_holm_bonferroni")
+        self.assertEqual(_dispatch_p_adjust(
+            "benjamini-hochberg").__name__, "_benjamini_hochberg")
+
+
+class VLRTests(TestCase):
+    def setUp(self):
+        self.mat = np.array([[1, 1, 2], [3, 5, 8], [13, 21, 55]])
+        self.mat_neg = np.array([[-1, 1, 2], [3, -5, 8], [13, 21, -55]])
+        self.mat_with_zero = np.array([[0, 1, 2], [3, 5, 8], [13, 21, 55]])
+
+    def test_vlr(self):
+        # No zeros
+        output = vlr(
+            x=self.mat[0],
+            y=self.mat[1],
+            ddof=1,
+            robust=False,
+        )
+        self.assertAlmostEqual(output, 0.0655828061998637)
+
+        # With zeros
+        output = vlr(
+            x=self.mat_with_zero[0],
+            y=self.mat_with_zero[1],
+            ddof=1,
+            robust=False,
+        )
+        assert np.isnan(output)
+
+        # assert raises error
+        with self.assertRaises(ValueError):
+            vlr(
+                x=self.mat_neg[0],
+                y=self.mat_neg[1],
+                ddof=1,
+                robust=False,
+            )
+
+    def test_robust_vlr(self):
+        # No zeros
+        output = vlr(
+            x=self.mat[0],
+            y=self.mat[1],
+            ddof=1,
+            robust=True,
+        )
+        self.assertAlmostEqual(output, 0.0655828061998637)
+
+        # With zeros
+        output = vlr(
+            x=self.mat_with_zero[0],
+            y=self.mat_with_zero[1],
+            ddof=1,
+            robust=True,
+        )
+        self.assertAlmostEqual(output, 0.024896522246558722)
+
+    def test_pairwise_vlr(self):
+
+        # No zeros
+        dism = pairwise_vlr(self.mat, ids=None, ddof=1, robust=False)
+        output = dism.condensed_form().sum()
+        self.assertAlmostEqual(output, 0.2857382286903922)
+
+        # With zeros
+        with self.assertRaises(DistanceMatrixError):
+            pairwise_vlr(self.mat_with_zero, ids=None, ddof=1, robust=False)
+
+        # no validation
+        dism = pairwise_vlr(self.mat, ids=None, ddof=1, robust=False,
+                            validate=False)
+        output = dism.data.sum() / 2
+        self.assertAlmostEqual(output, 0.2857382286903922)
+
+
+class DirMultTTestTests(TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        # Create sample data for testing
+        self.data = {
+            'feature1': [5, 8, 12, 15, 20],
+            'feature2': [3, 6, 9, 12, 15],
+            'feature3': [10, 15, 20, 25, 30],
+        }
+        self.table = pd.DataFrame(self.data)
+        self.grouping = pd.Series(['Group1', 'Group1', 'Group2', 'Group2', 'Group2'])
+        self.treatment = 'Group2'
+        self.reference = 'Group1'
+
+        d = 50
+        n = 200
+        self.depth = depth = 1000
+        p1 = np.random.lognormal(0, 1, size=d) * 10
+        p2 = np.random.lognormal(0.01, 1, size=d) * 10
+        self.p1, self.p2 = p1 / p1.sum(), p2 / p2.sum()
+        self.data2 = np.vstack(
+            (
+                [np.random.multinomial(depth, self.p1) for _ in range(n)],
+                [np.random.multinomial(depth, self.p2) for _ in range(n)]
+            )
+        )
+        self.table2 = pd.DataFrame(self.data2)
+        self.grouping2 = pd.Series(['Group1'] * n + ['Group2'] * n)
+
+    def test_dirmult_ttest_toy(self):
+        p1 = np.array([5, 6, 7])
+        p2 = np.array([4, 7, 7])
+        p1, p2 = p1 / p1.sum(), p2 / p2.sum()
+        depth = 1000
+        n = 100
+        data = np.vstack(
+            (
+                [np.random.multinomial(depth, p1) for _ in range(n)],
+                [np.random.multinomial(depth, p2) for _ in range(n)]
+            )
+        )
+        table = pd.DataFrame(data)
+        grouping = pd.Series(['Group1'] * n + ['Group2'] * n)
+
+        exp_lfc = np.log2([4/5, 7/6, 7/7])
+        exp_lfc = (exp_lfc - exp_lfc.mean())  # convert to CLR coordinates
+
+        res = dirmult_ttest(table, grouping, self.treatment, self.reference)
+
+        npt.assert_array_less(exp_lfc, res['CI(97.5)'])
+        npt.assert_array_less(res['CI(2.5)'], exp_lfc)
+
+    def test_dirmult_ttest_toy_depth(self):
+        p1 = np.array([5, 6, 7, 8, 9, 4])
+        p2 = np.array([4, 7, 7, 6, 5, 7])
+        p1, p2 = p1 / p1.sum(), p2 / p2.sum()
+        depth = 100
+        n = 100
+        data = np.vstack(
+            (
+                [np.random.multinomial(depth, p1) for _ in range(n)],
+                [np.random.multinomial(depth, p2) for _ in range(n)]
+            )
+        )
+        table = pd.DataFrame(data)
+        grouping = pd.Series(['Group1'] * n + ['Group2'] * n)
+        exp_lfc = np.log2([4/5, 7/6, 7/7, 6/8, 5/9, 7/4])
+        exp_lfc = (exp_lfc - exp_lfc.mean())  # convert to CLR coordinates
+        res_100 = dirmult_ttest(table, grouping, self.treatment, self.reference)
+
+        # increase sequencing depth by 100 fold
+        depth = 10000
+        data = np.vstack(
+            (
+                [np.random.multinomial(depth, p1) for _ in range(n)],
+                [np.random.multinomial(depth, p2) for _ in range(n)]
+            )
+        )
+        table = pd.DataFrame(data)
+        res_10000 = dirmult_ttest(table, grouping, self.treatment, self.reference)
+
+        # when the sequencing depth increases, the confidence intervals
+        # should also shrink
+
+        npt.assert_array_less(res_100['CI(2.5)'], res_10000['CI(2.5)'])
+        npt.assert_array_less(res_10000['CI(97.5)'], res_100['CI(97.5)'])
+
+    def test_dirmult_ttest_output(self):
+        exp_lfc = np.log2(self.p2 / self.p1)
+        exp_lfc = exp_lfc - exp_lfc.mean()
+        res = dirmult_ttest(self.table2, self.grouping2,
+                            self.treatment, self.reference)
+
+        npt.assert_array_less(res['Log2(FC)'], res['CI(97.5)'])
+        npt.assert_array_less(res['CI(2.5)'], res['Log2(FC)'])
+
+        # a couple of things that complicate the tests
+        # first, there is going to be a little bit of a fudge factor due
+        # to the pseudocount, so we will define it via log2(0.5)
+        eps = np.abs(np.log2(0.5))
+
+        # second, the confidence interval is expected to be inaccurate
+        # for (1/20) of the tests. So we should double check to
+        # see if the confidence intervals were able to capture
+        # 95% of the log-fold changes correctly
+        self.assertGreater(np.mean(res['CI(2.5)'] - eps < exp_lfc), 0.95)
+        self.assertGreater(np.mean(res['CI(97.5)'] + eps > exp_lfc), 0.95)
+
+    def test_dirmult_ttest_valid_input(self):
+        result = dirmult_ttest(self.table, self.grouping, self.treatment, self.reference)
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape[1], 8)  # Expected number of columns
+        pdt.assert_index_equal(result.index,
+                               pd.Index(['feature1', 'feature2', 'feature3']))
+
+    def test_dirmult_ttest_no_p_adjust(self):
+        result = dirmult_ttest(self.table, self.grouping, self.treatment, self.reference,
+                               p_adjust=None)
+        pdt.assert_series_equal(result['pvalue'], result['qvalue'], check_names=False)
+
+    def test_dirmult_ttest_invalid_table_type(self):
+        with self.assertRaises(TypeError):
+            dirmult_ttest("invalid_table", self.grouping, self.treatment, self.reference)
+
+    def test_dirmult_ttest_invalid_grouping_type(self):
+        with self.assertRaises(TypeError):
+            dirmult_ttest(self.table, "invalid_grouping", self.treatment, self.reference)
+
+    def test_dirmult_ttest_negative_values_in_table(self):
+        self.table.iloc[0, 0] = -5  # Modify a value to be negative
+        with self.assertRaises(ValueError):
+            dirmult_ttest(self.table, self.grouping, self.treatment, self.reference)
+
+    def test_dirmult_ttest_missing_values_in_grouping(self):
+        self.grouping[1] = np.nan  # Introduce a missing value in grouping
+        with self.assertRaises(ValueError):
+            dirmult_ttest(self.table, self.grouping, self.treatment, self.reference)
+
+    def test_dirmult_ttest_missing_values_in_table(self):
+        self.table.iloc[2, 1] = np.nan  # Introduce a missing value in the table
+        with self.assertRaises(ValueError):
+            dirmult_ttest(self.table, self.grouping, self.treatment, self.reference)
+
+    def test_dirmult_ttest_inconsistent_indexes(self):
+        self.table.index = ['a', 'b', 'c', 'd', 'e']  # Change table index
+        with self.assertRaises(ValueError):
+            dirmult_ttest(self.table, self.grouping, self.treatment, self.reference)
 
 
 if __name__ == "__main__":

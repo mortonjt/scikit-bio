@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import unittest
@@ -16,11 +16,11 @@ from skbio import Protein
 
 class TestProtein(unittest.TestCase):
     def test_alphabet(self):
-        expected = set("ACDEFGHIKLMNPQRSTVWYBZX-.*")
+        expected = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ-.*")
         self.assertIs(type(Protein.alphabet), set)
         self.assertEqual(Protein.alphabet, expected)
 
-        Protein.alphabet.add("JO")
+        Protein.alphabet.add("&")
         self.assertEqual(Protein.alphabet, expected)
         self.assertEqual(Protein('').alphabet, expected)
 
@@ -30,20 +30,30 @@ class TestProtein(unittest.TestCase):
     # TODO: duplicate of test_definite_chars, remove when nondegenerate_chars,
     # is removed
     def test_nondegenerate_chars(self):
-        exp = set("ACDEFGHIKLMNPQRSTVWY")
+        exp = set("ACDEFGHIKLMNOPQRSTUVWY")
         self.assertEqual(Protein("").nondegenerate_chars, exp)
         self.assertEqual(Protein.nondegenerate_chars, exp)
 
     def test_definite_chars(self):
-        exp = set("ACDEFGHIKLMNPQRSTVWY")
+        exp = set("ACDEFGHIKLMNOPQRSTUVWY")
         self.assertEqual(Protein("").definite_chars, exp)
         self.assertEqual(Protein.definite_chars, exp)
 
+    def test_noncanonical_chars(self):
+        exp = set("OU")
+        self.assertEqual(Protein("").noncanonical_chars, exp)
+        self.assertEqual(Protein.noncanonical_chars, exp)
+    
+    def test_wildcard_char(self):
+        exp = "X"
+        self.assertEqual(Protein("").wildcard_char, exp)
+        self.assertEqual(Protein.wildcard_char, exp)
+
     def test_degenerate_map(self):
         exp = {
-            'B': set(['D', 'N']), 'Z': set(['E', 'Q']),
+            'B': set(['D', 'N']), 'Z': set(['E', 'Q']), 'J': set(['I', 'L']),
             'X': set(['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M',
-                      'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y'])
+                      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'Y'])
         }
         self.assertEqual(Protein("").degenerate_map, exp)
         self.assertEqual(Protein.degenerate_map, exp)
@@ -123,11 +133,6 @@ class TestProtein(unittest.TestCase):
         obs = repr(Protein('*****'))
         self.assertIn('has gaps: False', obs)
         self.assertIn('has stops: True', obs)
-
-    def test_cannot_subclass(self):
-        with self.assertRaisesRegex(TypeError, r"Subclassing disabled"):
-            class CustomSequence(Protein):
-                pass
 
 
 if __name__ == "__main__":

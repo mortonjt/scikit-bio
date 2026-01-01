@@ -1,5 +1,4 @@
-"""
-Sequence distance metrics (:mod:`skbio.sequence.distance`)
+"""Sequence distance metrics (:mod:`skbio.sequence.distance`)
 ==========================================================
 
 .. currentmodule:: skbio.sequence.distance
@@ -19,24 +18,22 @@ Functions
    hamming
    kmer_distance
 
-"""
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
 import scipy.spatial.distance
 
 import skbio
-from skbio.util._decorator import experimental
 
 
-@experimental(as_of='0.4.2')
 def hamming(seq1, seq2):
     """Compute Hamming distance between two sequences.
 
@@ -93,7 +90,8 @@ def hamming(seq1, seq2):
     if len(seq1) != len(seq2):
         raise ValueError(
             "Hamming distance can only be computed between sequences of equal "
-            "length (%d != %d)" % (len(seq1), len(seq2)))
+            "length (%d != %d)" % (len(seq1), len(seq2))
+        )
 
     # scipy throws a RuntimeWarning when computing Hamming distance on length 0
     # input.
@@ -105,9 +103,8 @@ def hamming(seq1, seq2):
     return float(distance)
 
 
-@experimental(as_of='0.5.0')
 def kmer_distance(seq1, seq2, k, overlap=True):
-    """Compute the kmer distance between a pair of sequences
+    """Compute the kmer distance between a pair of sequences.
 
     The kmer distance between two sequences is the fraction of kmers that are
     unique to either sequence.
@@ -169,10 +166,12 @@ def _check_seqs(seq1, seq2):
         if not isinstance(seq, skbio.Sequence):
             raise TypeError(
                 "`seq1` and `seq2` must be Sequence instances, not %r"
-                % type(seq).__name__)
+                % type(seq).__name__
+            )
 
     # Asserts sequences have the same type
     if type(seq1) is not type(seq2):
         raise TypeError(
             "Sequences must have matching type. Type %r does not match type %r"
-            % (type(seq1).__name__, type(seq2).__name__))
+            % (type(seq1).__name__, type(seq2).__name__)
+        )

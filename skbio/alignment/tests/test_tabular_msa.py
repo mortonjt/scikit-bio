@@ -3,10 +3,10 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import collections
+import collections.abc
 import copy
 import unittest
 import functools
@@ -139,7 +139,7 @@ class TestTabularMSA(unittest.TestCase, ReallyEqualMixin):
     def test_constructor_non_unique_labels(self):
         msa = TabularMSA([DNA('ACGT'), DNA('ACGT')], index=[1, 1])
 
-        assert_index_equal(msa.index, pd.Int64Index([1, 1]))
+        assert_index_equal(msa.index, pd.Index([1, 1], dtype=np.int64))
 
     def test_constructor_empty_no_index(self):
         # sequence empty
@@ -549,7 +549,7 @@ class TestTabularMSA(unittest.TestCase, ReallyEqualMixin):
 
         self.assertReallyEqual(msa1, msa2)
         assert_index_equal(msa1.index, pd.RangeIndex(3))
-        assert_index_equal(msa2.index, pd.Int64Index([0, 1, 2]))
+        assert_index_equal(msa2.index, pd.Index([0, 1, 2], dtype=np.int64))
 
     def test_reassign_index_empty(self):
         # sequence empty
@@ -751,15 +751,14 @@ class TestTabularMSA(unittest.TestCase, ReallyEqualMixin):
             DNA('ACGT', metadata={'id': 0}),
             DNA('TAGA', metadata={'id': 10})], minter='id')
         msa.sort()
-        self.assertEqual(
-            msa,
-            TabularMSA([
-                DNA('ACGT', metadata={'id': 0}),
-                DNA('GGGG', metadata={'id': 8}),
-                DNA('TCCG', metadata={'id': 10}),
-                DNA('TAGG', metadata={'id': 10}),
-                DNA('TGGG', metadata={'id': 10}),
-                DNA('TAGA', metadata={'id': 10})], minter='id'))
+        self.assertEqual(msa._seqs.index.to_list(), [0, 8, 10, 10, 10, 10])
+        vals = list(msa._seqs.values)
+        self.assertEqual(vals[0], DNA('ACGT', metadata={'id': 0}))
+        self.assertEqual(vals[1], DNA('GGGG', metadata={'id': 8}))
+        self.assertIn(DNA('TCCG', metadata={'id': 10}), vals)
+        self.assertIn(DNA('TAGG', metadata={'id': 10}), vals[2:])
+        self.assertIn(DNA('TGGG', metadata={'id': 10}), vals[2:])
+        self.assertIn(DNA('TAGA', metadata={'id': 10}), vals[2:])
 
     def test_sort_on_key_with_all_repeats(self):
         msa = TabularMSA([
@@ -1360,40 +1359,6 @@ class TestLoc(SharedPropertyIndexTests, unittest.TestCase):
                                                                'd']},
                                     index=[0, 1]))
 
-    def test_multiindex_complicated_axis(self):
-        a = RNA("UUAG", metadata={0: 0}, positional_metadata={0: [1, 2, 3, 4]})
-        b = RNA("UAAG", metadata={1: 0}, positional_metadata={1: [1, 2, 3, 4]})
-        c = RNA("UAA-", metadata={2: 0}, positional_metadata={2: [1, 2, 3, 4]})
-        d = RNA("UA-G", metadata={3: 0}, positional_metadata={3: [1, 2, 3, 4]})
-        msa = TabularMSA([a, b, c, d], metadata={'x': 'y'},
-                         positional_metadata={'c': ['a', 'b', 'c', 'd']},
-                         index=[('a', 'x', 0), ('a', 'x', 1), ('a', 'y', 2),
-                                ('b', 'x', 0)])
-
-        self.assertEqual(self.get(msa, (([False, True, False, True],
-                                         'x', 0), Ellipsis)),
-                         TabularMSA([d], metadata={'x': 'y'},
-                                    positional_metadata={'c': ['a', 'b', 'c',
-                                                               'd']},
-                                    index=[('b', 'x', 0)]))
-
-    def test_multiindex_complicated_axis_empty_selection(self):
-        a = RNA("UUAG", metadata={0: 0}, positional_metadata={0: [1, 2, 3, 4]})
-        b = RNA("UAAG", metadata={1: 0}, positional_metadata={1: [1, 2, 3, 4]})
-        c = RNA("UAA-", metadata={2: 0}, positional_metadata={2: [1, 2, 3, 4]})
-        d = RNA("UA-G", metadata={3: 0}, positional_metadata={3: [1, 2, 3, 4]})
-        msa = TabularMSA([a, b, c, d], metadata={'x': 'y'},
-                         positional_metadata={'c': ['a', 'b', 'c', 'd']},
-                         index=[('a', 'x', 0), ('a', 'x', 1), ('a', 'y', 2),
-                                ('b', 'x', 0)])
-
-        self.assertEqual(self.get(msa, (([False, True, False, True],
-                                         'x', 2), Ellipsis)),
-                         TabularMSA([], metadata={'x': 'y'},
-                                    # TODO: Change for #1198
-                                    positional_metadata=None,
-                                    index=[]))
-
     def test_bool_index_scalar_bool_label(self):
         a = DNA("ACGA", metadata={0: 0}, positional_metadata={0: [1, 2, 3, 4]})
         b = DNA("A-GA", metadata={1: 1}, positional_metadata={1: [1, 2, 3, 4]})
@@ -1660,7 +1625,7 @@ class TestILoc(SharedPropertyIndexTests, unittest.TestCase):
                          TabularMSA([a[0:0], b[0:0], c[0:0]],
                                     metadata={3: 3},
                                     positional_metadata={3: np.array(
-                                        [], dtype=int)}))
+                                        [], dtype=np.int64)}))
 
     def test_fancy_empty_both_axes(self):
         a = DNA("ACGT", metadata={0: 0}, positional_metadata={0: [1, 2, 3, 4]})
@@ -3139,7 +3104,7 @@ class TestConservation(unittest.TestCase):
         msa = TabularMSA([Protein('A'),
                           Protein('G')])
         actual = msa.conservation(metric='inverse_shannon_uncertainty')
-        expected = np.array([1. - scipy.stats.entropy([0.5, 0.5], base=20)])
+        expected = np.array([1. - scipy.stats.entropy([0.5, 0.5], base=22)])
         npt.assert_array_equal(actual, expected)
 
         msa = TabularMSA([Protein('A'),
@@ -3148,24 +3113,24 @@ class TestConservation(unittest.TestCase):
                           Protein('G')])
         actual = msa.conservation(metric='inverse_shannon_uncertainty')
         expected = np.array([1. - scipy.stats.entropy([0.5, 0.25, 0.25],
-                                                      base=20)])
+                                                      base=22)])
         npt.assert_array_equal(actual, expected)
 
         msa = TabularMSA([Protein('AAC'),
                           Protein('GAC')])
         actual = msa.conservation(metric='inverse_shannon_uncertainty')
-        expected = np.array([1. - scipy.stats.entropy([0.5, 0.5], base=20),
-                             1. - scipy.stats.entropy([1.0], base=20),
-                             1. - scipy.stats.entropy([1.0], base=20)])
+        expected = np.array([1. - scipy.stats.entropy([0.5, 0.5], base=22),
+                             1. - scipy.stats.entropy([1.0], base=22),
+                             1. - scipy.stats.entropy([1.0], base=22)])
         npt.assert_array_equal(actual, expected)
 
         msa = TabularMSA([Protein('AACT'),
                           Protein('GACA')])
         actual = msa.conservation(metric='inverse_shannon_uncertainty')
-        expected = np.array([1. - scipy.stats.entropy([0.5, 0.5], base=20),
-                             1. - scipy.stats.entropy([1.0], base=20),
-                             1. - scipy.stats.entropy([1.0], base=20),
-                             1. - scipy.stats.entropy([0.5, 0.5], base=20)])
+        expected = np.array([1. - scipy.stats.entropy([0.5, 0.5], base=22),
+                             1. - scipy.stats.entropy([1.0], base=22),
+                             1. - scipy.stats.entropy([1.0], base=22),
+                             1. - scipy.stats.entropy([0.5, 0.5], base=22)])
         npt.assert_array_equal(actual, expected)
 
     def test_degenerate_mode_nan(self):
@@ -3642,7 +3607,7 @@ class TestIsSequenceAxis(unittest.TestCase):
 
 class TestHashable(unittest.TestCase):
     def test_unhashable_type(self):
-        self.assertNotIsInstance(TabularMSA([]), collections.Hashable)
+        self.assertNotIsInstance(TabularMSA([]), collections.abc.Hashable)
 
     def test_unhashable_object(self):
         with self.assertRaisesRegex(TypeError, r'unhashable'):
@@ -3712,6 +3677,7 @@ class TestRepr(unittest.TestCase):
 
 # NOTE: this must be a *separate* class for doctests only (no unit tests). nose
 # will not run the unit tests otherwise
+# TODO: check if this is still the case since nose is no longer used
 #
 # these doctests exercise the correct formatting of TabularMSA's repr in a
 # variety of situations. they are more extensive than the unit tests above

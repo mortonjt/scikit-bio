@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from functools import partial
@@ -11,11 +11,9 @@ from functools import partial
 import numpy as np
 from scipy.stats import rankdata
 
-from ._base import (_preprocess_input, _run_monte_carlo_stats, _build_results)
-from skbio.util._decorator import experimental
+from ._base import _preprocess_input, _run_monte_carlo_stats, _build_results
 
 
-@experimental(as_of="0.4.0")
 def anosim(distance_matrix, grouping, column=None, permutations=999):
     """Test for significant differences between groups using ANOSIM.
 
@@ -168,18 +166,18 @@ def anosim(distance_matrix, grouping, column=None, permutations=999):
 
     """
     sample_size, num_groups, grouping, tri_idxs, distances = _preprocess_input(
-        distance_matrix, grouping, column)
+        distance_matrix, grouping, column
+    )
 
     divisor = sample_size * ((sample_size - 1) / 4)
-    ranked_dists = rankdata(distances, method='average')
+    ranked_dists = rankdata(distances, method="average")
 
-    test_stat_function = partial(_compute_r_stat, tri_idxs, ranked_dists,
-                                 divisor)
-    stat, p_value = _run_monte_carlo_stats(test_stat_function, grouping,
-                                           permutations)
+    test_stat_function = partial(_compute_r_stat, tri_idxs, ranked_dists, divisor)
+    stat, p_value = _run_monte_carlo_stats(test_stat_function, grouping, permutations)
 
-    return _build_results('ANOSIM', 'R', sample_size, num_groups, stat,
-                          p_value, permutations)
+    return _build_results(
+        "ANOSIM", "R", sample_size, num_groups, stat, p_value, permutations
+    )
 
 
 def _compute_r_stat(tri_idxs, ranked_dists, divisor, grouping):

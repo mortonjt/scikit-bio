@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import sys
@@ -13,11 +13,9 @@ from copy import copy
 
 import numpy as np
 
-from skbio.util._decorator import experimental
 from .__subsample import _subsample_counts_without_replacement
 
 
-@experimental(as_of="0.4.0")
 def isubsample(items, maximum, minimum=1, buf_size=1000, bin_f=None):
     """Randomly subsample items from bins, without replacement.
 
@@ -107,17 +105,19 @@ def isubsample(items, maximum, minimum=1, buf_size=1000, bin_f=None):
     sampleA ATGGCA
     sampleB ATATATAT
     sampleB ATGGCG
+
     """
     if minimum > maximum:
         raise ValueError("minimum cannot be > maximum.")
     if minimum < 1 or maximum < 1:
         raise ValueError("minimum and maximum must be > 0.")
     if bin_f is None:
+
         def bin_f(x):
             return True
 
     # buffer some random values
-    random_values = np.random.randint(0, sys.maxsize, buf_size)
+    random_values = np.random.randint(0, sys.maxsize, buf_size, dtype=np.int64)
     random_idx = 0
 
     result = defaultdict(list)
@@ -130,7 +130,7 @@ def isubsample(items, maximum, minimum=1, buf_size=1000, bin_f=None):
         random_value = random_values[random_idx]
         random_idx += 1
         if random_idx >= buf_size:
-            random_values = np.random.randint(0, sys.maxsize, buf_size)
+            random_values = np.random.randint(0, sys.maxsize, buf_size, dtype=np.int64)
             random_idx = 0
 
         # push our item on to the heap and drop the smallest if necessary
@@ -147,7 +147,6 @@ def isubsample(items, maximum, minimum=1, buf_size=1000, bin_f=None):
             yield (bin_, item)
 
 
-@experimental(as_of="0.4.0")
 def subsample_counts(counts, n, replace=False):
     """Randomly subsample from a vector of counts, with or without replacement.
 
@@ -226,15 +225,17 @@ def subsample_counts(counts, n, replace=False):
         raise ValueError("n cannot be negative.")
 
     counts = np.asarray(counts)
-    counts = counts.astype(int, casting='safe')
+    counts = counts.astype(np.int64, casting="safe")
 
     if counts.ndim != 1:
         raise ValueError("Only 1-D vectors are supported.")
 
     counts_sum = counts.sum()
     if n > counts_sum and not replace:
-        raise ValueError("Cannot subsample more items than exist in input "
-                         "counts vector when `replace=False`.")
+        raise ValueError(
+            "Cannot subsample more items than exist in input "
+            "counts vector when `replace=False`."
+        )
 
     if replace:
         probs = counts / counts_sum
@@ -243,6 +244,5 @@ def subsample_counts(counts, n, replace=False):
         if counts_sum == n:
             result = counts
         else:
-            result = _subsample_counts_without_replacement(counts, n,
-                                                           counts_sum)
+            result = _subsample_counts_without_replacement(counts, n, counts_sum)
     return result

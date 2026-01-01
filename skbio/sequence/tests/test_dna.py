@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import unittest
@@ -43,11 +43,6 @@ class TestDNA(unittest.TestCase):
         seq = DNA('ATAT')
         self.assertEqual(seq.transcribe(), RNA('AUAU'))
         self.assertEqual(seq, DNA('ATAT'))
-
-    def test_cannot_subclass(self):
-        with self.assertRaisesRegex(TypeError, r"Subclassing disabled"):
-            class CustomSequence(DNA):
-                pass
 
 
 if __name__ == '__main__':

@@ -3,18 +3,22 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import unittest
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
-from IPython.core.display import Image, SVG
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
+try:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+except ImportError:
+    has_matplotlib = False
+else:
+    has_matplotlib = True
 
 from skbio import OrdinationResults
 
@@ -40,30 +44,6 @@ class TestOrdinationResults(unittest.TestCase):
         self.ordination_results = OrdinationResults(
             'CA', 'Correspondance Analysis', eigvals=eigvals,
             samples=samples_df, features=features_df)
-
-        # DataFrame for testing plot method. Has a categorical column with a
-        # mix of numbers and strings. Has a numeric column with a mix of ints,
-        # floats, and strings that can be converted to floats. Has a numeric
-        # column with missing data (np.nan).
-        self.df = pd.DataFrame([['foo', '42', 10],
-                                [22, 0, 8],
-                                [22, -4.2, np.nan],
-                                ['foo', '42.19', 11]],
-                               index=['A', 'B', 'C', 'D'],
-                               columns=['categorical', 'numeric', 'nancolumn'])
-
-        # Minimal ordination results for easier testing of plotting method.
-        # Paired with df above.
-        eigvals = np.array([0.50, 0.25, 0.25])
-        samples = np.array([[0.1, 0.2, 0.3],
-                            [0.2, 0.3, 0.4],
-                            [0.3, 0.4, 0.5],
-                            [0.4, 0.5, 0.6]])
-        samples_df = pd.DataFrame(samples, ['A', 'B', 'C', 'D'],
-                                  ['PC1', 'PC2', 'PC3'])
-
-        self.min_ord_results = OrdinationResults(
-            'PCoA', 'Principal Coordinate Analysis', eigvals, samples_df)
 
     def test_str(self):
         exp = ("Ordination results:\n"
@@ -94,6 +74,35 @@ class TestOrdinationResults(unittest.TestCase):
         obs = str(OrdinationResults('PCoA', 'Principal Coordinate Analysis',
                                     pd.Series(np.array([4.2])), samples_df))
         self.assertEqual(obs.split('\n'), exp.split('\n'))
+
+
+@unittest.skipUnless(has_matplotlib, "Matplotlib not available.")
+class TestOrdinationResultsPlotting(unittest.TestCase):
+    def setUp(self):
+        # DataFrame for testing plot method. Has a categorical column with a
+        # mix of numbers and strings. Has a numeric column with a mix of ints,
+        # floats, and strings that can be converted to floats. Has a numeric
+        # column with missing data (np.nan).
+        self.df = pd.DataFrame([['foo', '42', 10],
+                                [22, 0, 8],
+                                [22, -4.2, np.nan],
+                                ['foo', '42.19', 11]],
+                               index=['A', 'B', 'C', 'D'],
+                               columns=['categorical', 'numeric', 'nancolumn'])
+
+        # Minimal ordination results for easier testing of plotting method.
+        # Paired with df above.
+        eigvals = np.array([0.50, 0.25, 0.25])
+        samples = np.array([[0.1, 0.2, 0.3],
+                            [0.2, 0.3, 0.4],
+                            [0.3, 0.4, 0.5],
+                            [0.4, 0.5, 0.6]])
+        samples_df = pd.DataFrame(samples, ['A', 'B', 'C', 'D'],
+                                  ['PC1', 'PC2', 'PC3'])
+
+        self.min_ord_results = OrdinationResults(
+            'PCoA', 'Principal Coordinate Analysis', eigvals, samples_df)
+        self.min_ord_results._get_mpl_plt()
 
     def check_basic_figure_sanity(self, fig, exp_num_subplots, exp_title,
                                   exp_legend_exists, exp_xlabel, exp_ylabel,
@@ -261,29 +270,12 @@ class TestOrdinationResults(unittest.TestCase):
         self.assertTrue(legend is not None)
 
         # do some light sanity checking to make sure our input labels and
-        # colors are present. we're not using nose.tools.assert_items_equal
-        # because it isn't available in Python 3.
+        # colors are present
         labels = [t.get_text() for t in legend.get_texts()]
         npt.assert_equal(sorted(labels), ['bar', 'foo'])
 
-        colors = [l.get_color() for l in legend.get_lines()]
+        colors = [line.get_color() for line in legend.get_lines()]
         npt.assert_equal(sorted(colors), ['green', 'red'])
-
-    def test_repr_png(self):
-        obs = self.min_ord_results._repr_png_()
-        self.assertIsInstance(obs, bytes)
-        self.assertTrue(len(obs) > 0)
-
-    def test_repr_svg(self):
-        obs = self.min_ord_results._repr_svg_()
-        self.assertIsInstance(obs, str)
-        self.assertTrue(len(obs) > 0)
-
-    def test_png(self):
-        self.assertIsInstance(self.min_ord_results.png, Image)
-
-    def test_svg(self):
-        self.assertIsInstance(self.min_ord_results.svg, SVG)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
 #
 #  Distributed under the terms of the Modified BSD License.
 #
-#  The full license is in the file COPYING.txt, distributed with this software.
+#  The full license is in the file LICENSE.txt, distributed with this software.
 # -----------------------------------------------------------------------------
 
 from cpython cimport bool
@@ -372,16 +372,13 @@ cdef class AlignmentStructure:
         seq = sequence[begin:end + 1]
         index = 0
         for length, mid in tuple_cigar:
-            if mid == 'M':
-                aligned_sequence += [seq[i]
-                                     for i in range(index, length + index)]
-                index += length
-            elif mid == gap_type:
-                aligned_sequence += (['-'] * length)
+            if mid == gap_type:
+                aligned_sequence += ['-' * length]
             else:
-                pass
+                aligned_sequence += [seq[index:index + length]]
+                index += length
         # Our sequence end is sometimes beyond the cigar:
-        aligned_sequence += [seq[i] for i in range(index, end - begin + 1)]
+        aligned_sequence += [seq[index:end - begin + 1]]
         # Revert our index scheme to the original (2/2)
         self.set_zero_based(orig_z_base)
         return "".join(aligned_sequence)
@@ -555,7 +552,7 @@ cdef class StripedSmithWaterman:
                   substitution_matrix=None,
                   suppress_sequences=False,
                   zero_index=True):
-        # initalize our values
+        # initialize our values
         self.read_sequence = query_sequence
         if gap_open_penalty <= 0:
             raise ValueError("`gap_open_penalty` must be > 0")
@@ -584,7 +581,7 @@ cdef class StripedSmithWaterman:
         # Set up our mask_length
         # Mask is recommended to be max(query_sequence/2, 15)
         if mask_auto:
-            self.mask_length = len(query_sequence) / 2
+            self.mask_length = len(query_sequence) // 2
             if self.mask_length < mask_length:
                 self.mask_length = mask_length
         else:

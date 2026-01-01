@@ -1,27 +1,43 @@
-"""
-Statistics (:mod:`skbio.stats`)
-===============================
+r"""Multivariate Statistics (:mod:`skbio.stats`)
+============================================
 
 .. currentmodule:: skbio.stats
 
-This package contains various statistical methods, including ordination
-techniques and distance matrix-based statistics.
+This module provides various statistical methods to support the analyses of
+high-dimensional biological data to uncover the relationships among samples,
+features and metadata. Examples include distance matrix-based statistics,
+ordination methods, composition statistics, and data subsampling techniques.
 
-Subpackages
------------
+
+Distance matrix statistics
+--------------------------
 
 .. autosummary::
    :toctree: generated/
 
    distance
-   evolve
+
+
+Ordination methods
+------------------
+
+.. autosummary::
+   :toctree: generated/
+
    ordination
-   gradient
-   power
+
+
+Composition statistics
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+
    composition
 
-Functions
----------
+
+Data subsampling
+----------------
 
 .. autosummary::
    :toctree: generated/
@@ -29,16 +45,27 @@ Functions
    subsample_counts
    isubsample
 
-"""
+
+Other statistical methods
+-------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   evolve
+   gradient
+   power
+
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._subsample import subsample_counts, isubsample
 
-__all__ = ['subsample_counts', 'isubsample']
+__all__ = ["subsample_counts", "isubsample"]

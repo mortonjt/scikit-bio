@@ -1,0 +1,7 @@
+sphinx
+sphinx-design
+sphinx-copybutton
+pydata-sphinx-theme
+sphinxcontrib-youtube
+numpydoc
+matplotlib

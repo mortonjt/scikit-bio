@@ -1,5 +1,4 @@
-"""
-Beta diversity measures (:mod:`skbio.diversity.beta`)
+"""Beta diversity measures (:mod:`skbio.diversity.beta`)
 =====================================================
 
 .. currentmodule:: skbio.diversity.beta
@@ -18,14 +17,14 @@ Functions
     unweighted_unifrac
     weighted_unifrac
 
-"""
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._unifrac import unweighted_unifrac, weighted_unifrac

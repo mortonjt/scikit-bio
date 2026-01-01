@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from unittest import TestCase, main
@@ -17,8 +17,8 @@ from skbio.diversity.alpha import (
     berger_parker_d, brillouin_d, dominance, doubles, enspie,
     esty_ci, fisher_alpha, goods_coverage, heip_e, kempton_taylor_q,
     margalef, mcintosh_d, mcintosh_e, menhinick, michaelis_menten_fit,
-    observed_otus, osd, pielou_e, robbins, shannon, simpson, simpson_e,
-    singles, strong)
+    observed_features, observed_otus, osd, pielou_e, robbins, shannon,
+    simpson, simpson_e, singles, sobs, strong)
 
 
 class BaseTests(TestCase):
@@ -35,18 +35,24 @@ class BaseTests(TestCase):
                     ')root;'))
 
     def test_berger_parker_d(self):
-        self.assertEqual(berger_parker_d(np.array([5])), 1)
         self.assertEqual(berger_parker_d(np.array([5, 5])), 0.5)
         self.assertEqual(berger_parker_d(np.array([1, 1, 1, 1, 0])), 0.25)
         self.assertEqual(berger_parker_d(self.counts), 5 / 22)
+        self.assertEqual(berger_parker_d(np.array([5])), 1)
+        self.assertEqual(berger_parker_d([0, 0, 0]), 0)
+        self.assertEqual(berger_parker_d([]), 0)
 
     def test_brillouin_d(self):
         self.assertAlmostEqual(brillouin_d(np.array([1, 2, 0, 0, 3, 1])),
                                0.86289353018248782)
+        self.assertEqual(brillouin_d([0, 0, 0]), 0)
+        self.assertEqual(brillouin_d([]), 0)
 
     def test_dominance(self):
         self.assertEqual(dominance(np.array([5])), 1)
         self.assertAlmostEqual(dominance(np.array([1, 0, 2, 5, 2])), 0.34)
+        self.assertEqual(dominance([0, 0, 0]), 0)
+        self.assertEqual(dominance([]), 0)
 
     def test_doubles(self):
         self.assertEqual(doubles(self.counts), 3)
@@ -55,7 +61,7 @@ class BaseTests(TestCase):
         self.assertEqual(doubles(np.array([0, 0])), 0)
 
     def test_enspie(self):
-        # Totally even community should have ENS_pie = number of OTUs.
+        # Totally even community should have ENS_pie = number of taxa.
         self.assertAlmostEqual(enspie(np.array([1, 1, 1, 1, 1, 1])), 6)
         self.assertAlmostEqual(enspie(np.array([13, 13, 13, 13])), 4)
 
@@ -76,7 +82,7 @@ class BaseTests(TestCase):
         def _diversity(indices, f):
             """Calculate diversity index for each window of size 1.
 
-            indices: vector of indices of OTUs
+            indices: vector of indices of taxa
             f: f(counts) -> diversity measure
 
             """
@@ -107,30 +113,48 @@ class BaseTests(TestCase):
         npt.assert_array_almost_equal(observed_upper, expected_upper)
 
     def test_fisher_alpha(self):
-        exp = 2.7823795367398798
+        exp = 2.7823796
         arr = np.array([4, 3, 4, 0, 1, 0, 2])
         obs = fisher_alpha(arr)
-        self.assertAlmostEqual(obs, exp)
+        self.assertAlmostEqual(obs, exp, places=6)
 
-        # Should depend only on S and N (number of OTUs, number of
+        # Should depend only on S and N (number of taxa, number of
         # individuals / seqs), so we should obtain the same output as above.
         obs = fisher_alpha([1, 6, 1, 0, 1, 0, 5])
-        self.assertAlmostEqual(obs, exp)
+        self.assertAlmostEqual(obs, exp, places=6)
 
         # Should match another by hand:
-        # 2 OTUs, 62 seqs, alpha is 0.39509
+        # 2 taxa, 62 seqs, alpha is 0.39509
         obs = fisher_alpha([61, 0, 0, 1])
-        self.assertAlmostEqual(obs, 0.39509, delta=0.0001)
+        self.assertAlmostEqual(obs, 0.3950909, places=6)
 
         # Test case where we have >1000 individuals (SDR-IV makes note of this
         # case). Verified against R's vegan::fisher.alpha.
         obs = fisher_alpha([999, 0, 10])
-        self.assertAlmostEqual(obs, 0.2396492)
+        self.assertAlmostEqual(obs, 0.2396492, places=6)
+
+        # Should be infinite when all species are singletons
+        obs = fisher_alpha([1, 1, 1, 1, 1])
+        self.assertEqual(obs, np.inf)
+
+        # Should be zero when there is no individual
+        obs = fisher_alpha([0, 0, 0, 0, 0])
+        self.assertEqual(obs, 0)
+
+        # Should be large when most species are singletons
+        obs = fisher_alpha([1] * 99 + [2])
+        self.assertAlmostEqual(obs, 5033.278, places=3)
+
+        # Similar but even larger
+        obs = fisher_alpha([1] * 999 + [2])
+        TestCase().assertAlmostEqual(obs, 500333.3, places=1)
 
     def test_goods_coverage(self):
         counts = [1] * 75 + [2, 2, 2, 2, 2, 2, 3, 4, 4]
         obs = goods_coverage(counts)
         self.assertAlmostEqual(obs, 0.23469387755)
+        self.assertEqual(goods_coverage([0, 0, 0]), 0)
+        self.assertEqual(goods_coverage([]), 0)
 
     def test_heip_e(self):
         # Calculate "by hand".
@@ -157,10 +181,14 @@ class BaseTests(TestCase):
 
     def test_margalef(self):
         self.assertEqual(margalef(self.counts), 8 / np.log(22))
+        self.assertEqual(margalef([0, 0, 0]), 0)
+        self.assertEqual(margalef([]), 0)
 
     def test_mcintosh_d(self):
         self.assertAlmostEqual(mcintosh_d(np.array([1, 2, 3])),
                                0.636061424871458)
+        self.assertEqual(mcintosh_d([0, 0, 0]), 0)
+        self.assertEqual(mcintosh_d([]), 0)
 
     def test_mcintosh_e(self):
         num = np.sqrt(15)
@@ -169,7 +197,7 @@ class BaseTests(TestCase):
         self.assertEqual(mcintosh_e(np.array([1, 2, 3, 1])), exp)
 
     def test_menhinick(self):
-        # observed_otus = 9, total # of individuals = 22
+        # observed species richness = 9, total # of individuals = 22
         self.assertEqual(menhinick(self.counts), 9 / np.sqrt(22))
 
     def test_michaelis_menten_fit(self):
@@ -187,20 +215,22 @@ class BaseTests(TestCase):
 
         obs_few = michaelis_menten_fit(np.arange(4) * 2, num_repeats=10)
         obs_many = michaelis_menten_fit(np.arange(4) * 100, num_repeats=10)
-        # [0,100,200,300] looks like only 3 OTUs.
+        # [0,100,200,300] looks like only 3 taxa.
         self.assertAlmostEqual(obs_many, 3.0, places=1)
-        # [0,2,4,6] looks like 3 OTUs with maybe more to be found.
+        # [0,2,4,6] looks like 3 taxa with maybe more to be found.
         self.assertTrue(obs_few > obs_many)
 
+    def test_observed_features(self):
+        for obs in [np.array([4, 3, 4, 0, 1, 0, 2]),
+                    np.array([0, 0, 0]),
+                    self.counts]:
+            self.assertEqual(observed_features(obs), sobs(obs))
+
     def test_observed_otus(self):
-        obs = observed_otus(np.array([4, 3, 4, 0, 1, 0, 2]))
-        self.assertEqual(obs, 5)
-
-        obs = observed_otus(np.array([0, 0, 0]))
-        self.assertEqual(obs, 0)
-
-        obs = observed_otus(self.counts)
-        self.assertEqual(obs, 9)
+        for obs in [np.array([4, 3, 4, 0, 1, 0, 2]),
+                    np.array([0, 0, 0]),
+                    self.counts]:
+            self.assertEqual(observed_otus(obs), sobs(obs))
 
     def test_osd(self):
         self.assertEqual(osd(self.counts), (9, 3, 3))
@@ -215,22 +245,25 @@ class BaseTests(TestCase):
 
         self.assertAlmostEqual(pielou_e(self.counts), 0.92485490560)
 
-        self.assertEqual(pielou_e([1, 1]), 1.0)
-        self.assertEqual(pielou_e([1, 1, 1, 1]), 1.0)
-        self.assertEqual(pielou_e([1, 1, 1, 1, 0, 0]), 1.0)
+        self.assertAlmostEqual(pielou_e([1, 1]), 1.0)
+        self.assertAlmostEqual(pielou_e([1, 1, 1, 1]), 1.0)
+        self.assertAlmostEqual(pielou_e([1, 1, 1, 1, 0, 0]), 1.0)
 
         # Examples from
         # http://ww2.mdsg.umd.edu/interactive_lessons/biofilm/diverse.htm#3
         self.assertAlmostEqual(pielou_e([1, 1, 196, 1, 1]), 0.078, 3)
-        self.assertTrue(np.isnan(pielou_e([0, 0, 200, 0, 0])))
-        self.assertTrue(np.isnan(pielou_e([0, 0, 0, 0, 0])))
+        self.assertEqual(pielou_e([0, 0, 200, 0, 0]), 0)
+        self.assertEqual(pielou_e([0, 0, 0, 0, 0]), 0)
+        self.assertEqual(pielou_e([]), 0)
 
     def test_robbins(self):
         self.assertEqual(robbins(np.array([1, 2, 3, 0, 1])), 2 / 7)
 
     def test_shannon(self):
+        self.assertEqual(shannon(np.array([])), 0)
         self.assertEqual(shannon(np.array([5])), 0)
         self.assertEqual(shannon(np.array([5, 5])), 1)
+        self.assertEqual(shannon(np.array([0, 0, 0])), 0)
         self.assertEqual(shannon(np.array([1, 1, 1, 1, 0])), 2)
 
     def test_simpson(self):
@@ -262,8 +295,20 @@ class BaseTests(TestCase):
         self.assertEqual(singles(np.array([1])), 1)
         self.assertEqual(singles(np.array([0, 0])), 0)
 
+    def test_sobs(self):
+        obs = sobs(np.array([4, 3, 4, 0, 1, 0, 2]))
+        self.assertEqual(obs, 5)
+
+        obs = sobs(np.array([0, 0, 0]))
+        self.assertEqual(obs, 0)
+
+        obs = sobs(self.counts)
+        self.assertEqual(obs, 9)
+
     def test_strong(self):
         self.assertAlmostEqual(strong(np.array([1, 2, 3, 1])), 0.214285714)
+        self.assertEqual(strong([0, 0, 0]), 0)
+        self.assertEqual(strong([]), 0)
 
 
 if __name__ == '__main__':

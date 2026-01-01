@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
@@ -166,18 +166,18 @@ def _nodes_by_counts(np.ndarray counts,
     cdef:
         np.ndarray nodes, observed_ids
         np.ndarray[DTYPE_t, ndim=2] count_array, counts_t
-        np.ndarray[DTYPE_t, ndim=1] observed_indices, otus_in_nodes
+        np.ndarray[DTYPE_t, ndim=1] observed_indices, taxa_in_nodes
         Py_ssize_t i, j
         set observed_ids_set
         object n
         dict node_lookup
-        DTYPE_t n_count_vectors, n_count_otus
+        DTYPE_t n_count_vectors, n_count_taxa
 
     nodes = indexed['name']
 
     # allow counts to be a vector
     counts = np.atleast_2d(counts)
-    counts = counts.astype(DTYPE)
+    counts = counts.astype(DTYPE, copy=False)
 
     # determine observed IDs. It may be possible to unroll these calls to
     # squeeze a little more performance
@@ -193,10 +193,10 @@ def _nodes_by_counts(np.ndarray counts,
             node_lookup[n] = i
 
     # determine the positions of the observed IDs in nodes
-    otus_in_nodes = np.zeros(observed_ids.shape[0], dtype=DTYPE)
+    taxa_in_nodes = np.zeros(observed_ids.shape[0], dtype=DTYPE)
     for i in range(observed_ids.shape[0]):
         n = observed_ids[i]
-        otus_in_nodes[i] = node_lookup[n]
+        taxa_in_nodes[i] = node_lookup[n]
 
     # count_array has a row per node (not tip) and a column per env.
     n_count_vectors = counts.shape[0]
@@ -205,11 +205,12 @@ def _nodes_by_counts(np.ndarray counts,
     # populate the counts array with the counts of each observation in each
     # env
     counts_t = counts.transpose()
-    n_count_otus = otus_in_nodes.shape[0]
-    for i in range(n_count_otus):
+    n_count_taxa = taxa_in_nodes.shape[0]
+    for i in range(n_count_taxa):
         for j in range(n_count_vectors):
-            count_array[otus_in_nodes[i], j] = counts_t[observed_indices[i], j]
+            count_array[taxa_in_nodes[i], j] = counts_t[observed_indices[i], j]
 
-    _traverse_reduce(indexed['child_index'], count_array)
+    child_index = indexed['child_index'].astype(DTYPE, copy=False)
+    _traverse_reduce(child_index, count_array)
 
     return count_array

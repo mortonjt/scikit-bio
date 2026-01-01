@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from io import StringIO
@@ -27,8 +27,8 @@ from skbio import DNA, read, write
 
 
 class MockClass:
-    def __init__(self, l):
-        self.list = l
+    def __init__(self, list_):
+        self.list = list_
 
     def __eq__(self, other):
         # They are only equal when the class is EXACTLY the same. We don't want
@@ -63,10 +63,10 @@ class RegistryTest(unittest.TestCase):
         self.fd2, self.fp2 = mkstemp()
 
     def tearDown(self):
-        os.remove(self.fp1)
         os.close(self.fd1)
-        os.remove(self.fp2)
+        os.remove(self.fp1)
         os.close(self.fd2)
+        os.remove(self.fp2)
 
 
 class TestRegisterAndGetReader(RegistryTest):
@@ -1692,8 +1692,9 @@ class TestWrite(RegistryTest):
             iterator = iter(obj.list)
             fh.write(next(iterator))
             fh.flush()  # Flush should be a noop for bz2
-            for l in iterator:
-                fh.write(l)
+
+            for line in iterator:
+                fh.write(line)
 
         self.registry.write(obj, format='format1', into=fp, compression='bz2')
         self.registry.write(obj, format='format1', into=f, compression='bz2')

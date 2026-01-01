@@ -3,15 +3,18 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import io
+import h5py
 
 
 def is_binary_file(file):
-    return isinstance(file, (io.BufferedReader, io.BufferedWriter,
-                             io.BufferedRandom))
+    return isinstance(
+        file, (io.BufferedReader, io.BufferedWriter, io.BufferedRandom, h5py.Group)
+    )
+
 
 # Everything beyond this point will be some kind of hack needed to make
 # everything work. It's not pretty and it doesn't make great sense much
@@ -35,9 +38,10 @@ class WrappedBufferedRandom(FlushDestructorMixin, io.BufferedRandom):
 
 
 class CompressedMixin(FlushDestructorMixin):
-    """Act as a bridge between worlds"""
+    """Act as a bridge between worlds."""
+
     def __init__(self, before_file, *args, **kwargs):
-        self.streamable = kwargs.pop('streamable', True)
+        self.streamable = kwargs.pop("streamable", True)
         self._before_file = before_file
         super(CompressedMixin, self).__init__(*args, **kwargs)
 
@@ -66,8 +70,7 @@ class CompressedBufferedWriter(CompressedMixin, io.BufferedWriter):
 class IterableStringReaderIO(io.StringIO):
     def __init__(self, iterable, newline):
         self._iterable = iterable
-        super(IterableStringReaderIO, self).__init__(''.join(iterable),
-                                                     newline=newline)
+        super(IterableStringReaderIO, self).__init__("".join(iterable), newline=newline)
 
 
 class IterableStringWriterIO(IterableStringReaderIO):

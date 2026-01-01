@@ -3,17 +3,15 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
 
 from skbio.diversity._util import _validate_counts_vector
-from skbio.util._decorator import experimental
 
 
-@experimental(as_of="0.4.0")
-def gini_index(data, method='rectangles'):
+def gini_index(data, method="rectangles"):
     r"""Calculate the Gini index.
 
     The Gini index is defined as
@@ -78,7 +76,7 @@ def gini_index(data, method='rectangles'):
     data = _validate_counts_vector(data, suppress_cast=True)
     lorenz_points = _lorenz_curve(data)
     B = _lorenz_curve_integrator(lorenz_points, method)
-    return 1 - 2 * B
+    return max(0.0, 1 - 2 * B)
 
 
 def _lorenz_curve(data):
@@ -96,7 +94,7 @@ def _lorenz_curve(data):
 
 
 def _lorenz_curve_integrator(lc_pts, method):
-    """Calculates the area under a Lorenz curve.
+    """Calculate the area under a Lorenz curve.
 
     Notes
     -----
@@ -109,15 +107,17 @@ def _lorenz_curve_integrator(lc_pts, method):
     # each point differs by 1/n
     dx = 1 / x.shape[0]
 
-    if method == 'trapezoids':
+    if method == "trapezoids":
         # 0 percent of the population has zero percent of the goods
         h_0 = 0.0
         h_n = y[-1]
         # the 0th entry is at x=1/n
         sum_hs = y[:-1].sum()
         return dx * ((h_0 + h_n) / 2 + sum_hs)
-    elif method == 'rectangles':
+    elif method == "rectangles":
         return dx * y.sum()
     else:
-        raise ValueError("Method '%s' not implemented. Available methods: "
-                         "'rectangles', 'trapezoids'." % method)
+        raise ValueError(
+            "Method '%s' not implemented. Available methods: "
+            "'rectangles', 'trapezoids'." % method
+        )

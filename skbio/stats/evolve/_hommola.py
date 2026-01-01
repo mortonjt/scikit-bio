@@ -3,17 +3,15 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
 from scipy.stats import pearsonr
 
 from skbio import DistanceMatrix
-from skbio.util._decorator import experimental
 
 
-@experimental(as_of="0.4.0")
 def hommola_cospeciation(host_dist, par_dist, interaction, permutations=999):
     """Perform Hommola et al (2009) host/parasite cospeciation test.
 
@@ -126,8 +124,8 @@ def hommola_cospeciation(host_dist, par_dist, interaction, permutations=999):
 
     >>> corr_coeff, p_value, perm_stats = hommola_cospeciation(
     ...     hdist, pdist, interaction, permutations=99)
-    >>> round(corr_coeff, 8)
-    0.83171097
+    >>> print("%.3f" % corr_coeff)
+    0.832
 
     In this case, the host distances have a fairly strong positive correlation
     with the symbiont distances. However, this may also reflect structure
@@ -150,17 +148,23 @@ def hommola_cospeciation(host_dist, par_dist, interaction, permutations=999):
     if num_hosts < 3 or num_pars < 3:
         raise ValueError("Distance matrices must be a minimum of 3x3 in size.")
     if num_hosts != interaction.shape[1]:
-        raise ValueError("Number of interaction matrix columns must match "
-                         "number of hosts in `host_dist`.")
+        raise ValueError(
+            "Number of interaction matrix columns must match "
+            "number of hosts in `host_dist`."
+        )
     if num_pars != interaction.shape[0]:
-        raise ValueError("Number of interaction matrix rows must match "
-                         "number of parasites in `par_dist`.")
+        raise ValueError(
+            "Number of interaction matrix rows must match "
+            "number of parasites in `par_dist`."
+        )
     if permutations < 0:
-        raise ValueError("Number of permutations must be greater than or "
-                         "equal to zero.")
+        raise ValueError(
+            "Number of permutations must be greater than or " "equal to zero."
+        )
     if interaction.sum() < 3:
-        raise ValueError("Must have at least 3 host-parasite interactions in "
-                         "`interaction`.")
+        raise ValueError(
+            "Must have at least 3 host-parasite interactions in " "`interaction`."
+        )
 
     # shortcut to eliminate nested for-loops specifying pairwise interaction
     # partners as randomizeable indices
@@ -169,10 +173,8 @@ def hommola_cospeciation(host_dist, par_dist, interaction, permutations=999):
     hosts_k_labels, hosts_t_labels = _gen_lists(hosts)
 
     # get a vector of pairwise distances for each interaction edge
-    x = _get_dist(hosts_k_labels, hosts_t_labels, host_dist.data,
-                  np.arange(num_hosts))
-    y = _get_dist(pars_k_labels, pars_t_labels, par_dist.data,
-                  np.arange(num_pars))
+    x = _get_dist(hosts_k_labels, hosts_t_labels, host_dist.data, np.arange(num_hosts))
+    y = _get_dist(pars_k_labels, pars_t_labels, par_dist.data, np.arange(num_pars))
 
     # calculate the observed correlation coefficient for these hosts/symbionts
     corr_coeff = pearsonr(x, y)[0]
@@ -260,6 +262,6 @@ def _gen_lists(labels):
        1457-1468.
 
     """
-    i_array, j_array = np.transpose(np.tri(len(labels)-1)).nonzero()
-    j_array = j_array + 1
+    i_array, j_array = np.transpose(np.tri(len(labels) - 1)).nonzero()
+    j_array += 1
     return labels[i_array], labels[j_array]

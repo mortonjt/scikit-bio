@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import abc
@@ -11,13 +11,11 @@ import copy
 
 import pandas as pd
 
-from skbio.util._decorator import stable, experimental
 from skbio.metadata import IntervalMetadata
 
 
 class MetadataMixin(metaclass=abc.ABCMeta):
     @property
-    @stable(as_of="0.4.0")
     def metadata(self):
         """``dict`` containing metadata which applies to the entire object.
 
@@ -36,21 +34,20 @@ class MetadataMixin(metaclass=abc.ABCMeta):
 
         Create a sequence with metadata:
 
-        >>> from pprint import pprint
         >>> from skbio import Sequence
         >>> seq = Sequence('ACGT', metadata={'description': 'seq description',
         ...                                  'id': 'seq-id'})
 
         Retrieve metadata:
 
-        >>> pprint(seq.metadata) # using pprint to display dict in sorted order
+        >>> print(seq.metadata)
         {'description': 'seq description', 'id': 'seq-id'}
 
         Update metadata:
 
         >>> seq.metadata['id'] = 'new-id'
         >>> seq.metadata['pubmed'] = 12345
-        >>> pprint(seq.metadata)
+        >>> print(seq.metadata)
         {'description': 'seq description', 'id': 'new-id', 'pubmed': 12345}
 
         Set metadata:
@@ -78,8 +75,9 @@ class MetadataMixin(metaclass=abc.ABCMeta):
     @metadata.setter
     def metadata(self, metadata):
         if not isinstance(metadata, dict):
-            raise TypeError("metadata must be a dict, not type %r" %
-                            type(metadata).__name__)
+            raise TypeError(
+                "metadata must be a dict, not type %r" % type(metadata).__name__
+            )
         # Shallow copy.
         self._metadata = metadata.copy()
 
@@ -143,7 +141,6 @@ class MetadataMixin(metaclass=abc.ABCMeta):
         else:
             return None
 
-    @stable(as_of="0.4.0")
     def has_metadata(self):
         """Determine if the object has metadata.
 
@@ -192,7 +189,6 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @property
-    @stable(as_of="0.4.0")
     def positional_metadata(self):
         """``pd.DataFrame`` containing metadata along an axis.
 
@@ -277,7 +273,8 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
         if self._positional_metadata is None:
             # Not using setter to avoid copy.
             self._positional_metadata = pd.DataFrame(
-                index=self._get_positional_metadata_index())
+                index=self._get_positional_metadata_index()
+            )
         return self._positional_metadata
 
     @positional_metadata.setter
@@ -292,15 +289,16 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
             raise TypeError(
                 "Invalid positional metadata. Must be consumable by "
                 "`pd.DataFrame` constructor. Original pandas error message: "
-                "\"%s\"" % e)
+                '"%s"' % e
+            )
 
         num_rows = len(positional_metadata.index)
         axis_len = self._positional_metadata_axis_len_()
         if num_rows != axis_len:
             raise ValueError(
                 "Number of positional metadata values (%d) must match the "
-                "positional metadata axis length (%d)."
-                % (num_rows, axis_len))
+                "positional metadata axis length (%d)." % (num_rows, axis_len)
+            )
 
         positional_metadata.index = self._get_positional_metadata_index()
         self._positional_metadata = positional_metadata
@@ -311,9 +309,9 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
 
     def _get_positional_metadata_index(self):
         """Create a memory-efficient integer index for positional metadata."""
-        return pd.RangeIndex(start=0,
-                             stop=self._positional_metadata_axis_len_(),
-                             step=1)
+        return pd.RangeIndex(
+            start=0, stop=self._positional_metadata_axis_len_(), step=1
+        )
 
     @abc.abstractmethod
     def __init__(self, positional_metadata=None):
@@ -338,11 +336,12 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
         # positional metadata.
         if self.has_positional_metadata() and other.has_positional_metadata():
             return self.positional_metadata.equals(other.positional_metadata)
-        elif not (self.has_positional_metadata() or
-                  other.has_positional_metadata()):
+        elif not (self.has_positional_metadata() or other.has_positional_metadata()):
             # Both don't have positional metadata.
-            return (self._positional_metadata_axis_len_() ==
-                    other._positional_metadata_axis_len_())
+            return (
+                self._positional_metadata_axis_len_()
+                == other._positional_metadata_axis_len_()
+            )
         else:
             # One has positional metadata while the other does not.
             return False
@@ -376,14 +375,15 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
             # Reference: https://github.com/pandas-dev/pandas/issues/17406
             df = self.positional_metadata
             data_cp = copy.deepcopy(df.values.tolist(), memo)
-            return pd.DataFrame(data_cp,
-                                index=df.index.copy(deep=True),
-                                columns=df.columns.copy(deep=True),
-                                copy=False)
+            return pd.DataFrame(
+                data_cp,
+                index=df.index.copy(deep=True),
+                columns=df.columns.copy(deep=True),
+                copy=False,
+            )
         else:
             return None
 
-    @stable(as_of="0.4.0")
     def has_positional_metadata(self):
         """Determine if the object has positional metadata.
 
@@ -416,21 +416,23 @@ class PositionalMetadataMixin(metaclass=abc.ABCMeta):
         True
 
         """
-        return (self._positional_metadata is not None and
-                len(self.positional_metadata.columns) > 0)
+        return (
+            self._positional_metadata is not None
+            and len(self.positional_metadata.columns) > 0
+        )
 
 
 class IntervalMetadataMixin(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _interval_metadata_axis_len_(self):
-        '''Return length of axis that interval metadata applies to.
+        """Return length of axis that interval metadata applies to.
 
         Returns
         -------
         int
             Interval metadata axis length.
 
-        '''
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -446,9 +448,8 @@ class IntervalMetadataMixin(metaclass=abc.ABCMeta):
             self.interval_metadata = interval_metadata
 
     @property
-    @experimental(as_of="0.5.1")
     def interval_metadata(self):
-        '''``IntervalMetadata`` object containing info about interval features.
+        """``IntervalMetadata`` object containing info about interval features.
 
         Notes
         -----
@@ -456,11 +457,12 @@ class IntervalMetadataMixin(metaclass=abc.ABCMeta):
         interval metadata, a shallow copy of the ``IntervalMetadata``
         object is made.
 
-        '''
+        """
         if self._interval_metadata is None:
             # Not using setter to avoid copy.
             self._interval_metadata = IntervalMetadata(
-                self._interval_metadata_axis_len_())
+                self._interval_metadata_axis_len_()
+            )
         return self._interval_metadata
 
     @interval_metadata.setter
@@ -471,25 +473,29 @@ class IntervalMetadataMixin(metaclass=abc.ABCMeta):
             axis_len = self._interval_metadata_axis_len_()
             if lower_bound != 0:
                 raise ValueError(
-                    'The lower bound for the interval features (%d) '
-                    'must be zero.' % lower_bound)
+                    "The lower bound for the interval features (%d) "
+                    "must be zero." % lower_bound
+                )
             if upper_bound is not None and upper_bound != axis_len:
                 raise ValueError(
-                    'The upper bound for the interval features (%d) '
-                    'must match the interval metadata axis length (%d)'
-                    % (upper_bound, axis_len))
+                    "The upper bound for the interval features (%d) "
+                    "must match the interval metadata axis length (%d)"
+                    % (upper_bound, axis_len)
+                )
             # copy all the data to the mixin
             self._interval_metadata = IntervalMetadata(
-                axis_len, copy_from=interval_metadata)
+                axis_len, copy_from=interval_metadata
+            )
         else:
-            raise TypeError('You must provide `IntervalMetadata` object, '
-                            'not type %s.' % type(interval_metadata).__name__)
+            raise TypeError(
+                "You must provide `IntervalMetadata` object, "
+                "not type %s." % type(interval_metadata).__name__
+            )
 
     @interval_metadata.deleter
     def interval_metadata(self):
         self._interval_metadata = None
 
-    @experimental(as_of="0.5.1")
     def has_interval_metadata(self):
         """Determine if the object has interval metadata.
 
@@ -502,8 +508,10 @@ class IntervalMetadataMixin(metaclass=abc.ABCMeta):
             Indicates whether the object has interval metadata.
 
         """
-        return (self._interval_metadata is not None and
-                self.interval_metadata.num_interval_features > 0)
+        return (
+            self._interval_metadata is not None
+            and self.interval_metadata.num_interval_features > 0
+        )
 
     @abc.abstractmethod
     def __eq__(self, other):
@@ -516,11 +524,12 @@ class IntervalMetadataMixin(metaclass=abc.ABCMeta):
         # interval metadata.
         if self.has_interval_metadata() and other.has_interval_metadata():
             return self.interval_metadata == other.interval_metadata
-        elif not (self.has_interval_metadata() or
-                  other.has_interval_metadata()):
+        elif not (self.has_interval_metadata() or other.has_interval_metadata()):
             # Both don't have interval metadata.
-            return (self._interval_metadata_axis_len_() ==
-                    other._interval_metadata_axis_len_())
+            return (
+                self._interval_metadata_axis_len_()
+                == other._interval_metadata_axis_len_()
+            )
         else:
             # One has interval metadata while the other does not.
             return False

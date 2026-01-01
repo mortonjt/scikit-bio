@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import unittest
@@ -24,10 +24,10 @@ class AceTests(unittest.TestCase):
         npt.assert_almost_equal(ace(np.array([12, 3, 2, 1])), 4.6)
         npt.assert_almost_equal(ace(np.array([12, 3, 6, 1, 10])), 5.62749672)
 
-        # Just returns the number of OTUs when all are abundant.
+        # Just return the number of taxa when all are abundant.
         npt.assert_almost_equal(ace(np.array([12, 12, 13, 14])), 4.0)
 
-        # Border case: only singletons and 10-tons, no abundant OTUs.
+        # Border case: only singletons and 10-tons, no abundant taxa.
         npt.assert_almost_equal(ace([0, 1, 1, 0, 0, 10, 10, 1, 0, 0]),
                                 9.35681818182)
 

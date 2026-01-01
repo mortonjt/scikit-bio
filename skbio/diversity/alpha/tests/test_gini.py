@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from unittest import TestCase, main
@@ -25,6 +25,11 @@ class GiniTests(TestCase):
                       0.15855354659248957, 0.2517385257301808,
                       0.34492350486787204, 0.541029207232267,
                       0.74965229485396379, 1.0]))
+
+    def test_gini_index_bug_1844(self):
+        exp = 0.0
+        obs = gini_index([2, 2, 2, 2, 2])
+        self.assertAlmostEqual(obs, exp)
 
     def test_gini_index(self):
         exp = 0.32771210013908214

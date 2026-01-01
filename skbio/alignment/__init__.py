@@ -1,6 +1,5 @@
-r"""
-Alignments (:mod:`skbio.alignment`)
-===================================
+r"""Sequence Alignments (:mod:`skbio.alignment`)
+============================================
 
 .. currentmodule:: skbio.alignment
 
@@ -8,16 +7,20 @@ This module provides functionality for computing and manipulating sequence
 alignments. DNA, RNA, and protein sequences can be aligned, as well as
 sequences with custom alphabets.
 
-Data Structures
----------------
+
+Alignment structure
+-------------------
 
 .. autosummary::
    :toctree: generated/
 
    TabularMSA
 
-Optimized (i.e., production-ready) Alignment Algorithms
--------------------------------------------------------
+
+Alignment algorithms
+--------------------
+
+.. rubric:: Optimized (i.e., production-ready) algorithms
 
 .. autosummary::
    :toctree: generated/
@@ -26,8 +29,7 @@ Optimized (i.e., production-ready) Alignment Algorithms
    AlignmentStructure
    local_pairwise_align_ssw
 
-Slow (i.e., educational-purposes only) Alignment Algorithms
------------------------------------------------------------
+.. rubric:: Slow (i.e., educational-purposes only) algorithms
 
 .. autosummary::
    :toctree: generated/
@@ -39,16 +41,21 @@ Slow (i.e., educational-purposes only) Alignment Algorithms
    local_pairwise_align_protein
    local_pairwise_align
 
-General functionality
----------------------
+Deprecated functionality
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: generated/
 
     make_identity_substitution_matrix
 
-Data Structure Examples
------------------------
+
+Tutorial
+--------
+
+Alignment data structure
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 Load two DNA sequences that have been previously aligned into a ``TabularMSA``
 object, using sequence IDs as the MSA's index:
 
@@ -68,11 +75,9 @@ TCC--G-GGCA..
 >>> msa.index
 Index(['seq1', 'seq2'], dtype='object')
 
-Alignment Algorithm Examples
-----------------------------
+Using the optimized alignment algorithm
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Optimized Alignment Algorithm Examples
---------------------------------------
 Using the convenient ``local_pairwise_align_ssw`` function:
 
 >>> from skbio.alignment import local_pairwise_align_ssw
@@ -87,7 +92,7 @@ Stats:
     sequence count: 2
     position count: 30
 ------------------------------
-ACTAAGGCTCTC-TACCC----CTCTCAGA
+ACTAAGGCTCTCT-ACCCC----TCTCAGA
 ACTAAGGCTC-CTAACCCCCTTTTCTCAGA
 >>> score
 27
@@ -123,17 +128,18 @@ way and finding the aligned sequence representations:
 ...     alignments.append(alignment)
 ...
 >>> print(alignments[0])
-ACTAAGGCT-...
+ACTAAGGCTC...
 ACT-AGGCTC...
 Score: 38
 Length: 30
 >>> print(alignments[0].aligned_query_sequence)
-ACTAAGGCT---CTCTACCCCTCTCAGAGA
+ACTAAGGCTC---TCTACCCCTCTCAGAGA
 >>> print(alignments[0].aligned_target_sequence)
 ACT-AGGCTCCCTTCTACCCCTCTCAGAGA
 
-Slow Alignment Algorithm Examples
----------------------------------
+Using the slow alignment algorithm
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 scikit-bio also provides pure-Python implementations of Smith-Waterman and
 Needleman-Wunsch alignment. These are much slower than the methods described
 above, but serve as useful educational examples as they're simpler to
@@ -190,28 +196,39 @@ Stats:
 GCGTGCCTAAGGTATGCAAG
 ACGTGCCTA-GGTACGCAAG
 
-"""
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._tabular_msa import TabularMSA
 from ._pairwise import (
-    local_pairwise_align_nucleotide, local_pairwise_align_protein,
-    local_pairwise_align, global_pairwise_align_nucleotide,
-    global_pairwise_align_protein, global_pairwise_align,
-    make_identity_substitution_matrix, local_pairwise_align_ssw
+    local_pairwise_align_nucleotide,
+    local_pairwise_align_protein,
+    local_pairwise_align,
+    global_pairwise_align_nucleotide,
+    global_pairwise_align_protein,
+    global_pairwise_align,
+    make_identity_substitution_matrix,
+    local_pairwise_align_ssw,
 )
-from skbio.alignment._ssw_wrapper import (
-    StripedSmithWaterman, AlignmentStructure)
+from skbio.alignment._ssw_wrapper import StripedSmithWaterman, AlignmentStructure
 
-__all__ = ['TabularMSA', 'StripedSmithWaterman', 'AlignmentStructure',
-           'local_pairwise_align_ssw', 'global_pairwise_align',
-           'global_pairwise_align_nucleotide', 'global_pairwise_align_protein',
-           'local_pairwise_align', 'local_pairwise_align_nucleotide',
-           'local_pairwise_align_protein', 'make_identity_substitution_matrix']
+__all__ = [
+    "TabularMSA",
+    "StripedSmithWaterman",
+    "AlignmentStructure",
+    "local_pairwise_align_ssw",
+    "global_pairwise_align",
+    "global_pairwise_align_nucleotide",
+    "global_pairwise_align_protein",
+    "local_pairwise_align",
+    "local_pairwise_align_nucleotide",
+    "local_pairwise_align_protein",
+    "make_identity_substitution_matrix",
+]

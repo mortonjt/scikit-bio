@@ -1,28 +1,21 @@
-r"""
-Sequences (:mod:`skbio.sequence`)
-=================================
+r"""Biological Sequences (:mod:`skbio.sequence`)
+============================================
 
 .. currentmodule:: skbio.sequence
 
-This module provides classes for storing and working with sequences, including
-generic/nonbiological sequences which have no alphabet restrictions
-(``Sequence``) and sequences based on IUPAC-defined alphabets (``DNA``,
-``RNA``, ``Protein``). Common operations are defined as methods, for example
-computing the reverse complement of a DNA sequence, or searching for
-N-glycosylation motifs in protein sequences. Class attributes provide valid
-character sets, complement maps for different sequence types, and degenerate
-character definitions. Additionally this module defines the ``GeneticCode``
-class, which represents an immutable object that translates DNA or RNA
-sequences into protein sequences.
+This module provides functionality for storing and working with sequences, including
+molecular sequences based on IUPAC-defined alphabets (:class:`DNA`, :class:`RNA`,
+:class:`Protein`), sequences based on custom alphabets (:class:`GrammaredSequence`),
+and generic/non-biological sequences with no alphabet restrictions (:class:`Sequence`).
 
-The primary information stored for each different type of sequence object is
-the underlying sequence data itself. This is stored as an immutable numpy
-array. Additionally, each type of sequence may include optional metadata
-and positional metadata. Note that metadata and positional metadata are
-mutable.
+Additionally, this module defines the :class:`GeneticCode` class, which represents an
+immutable object that translates DNA or RNA sequences into protein sequences, and
+the :class:`SubstitutionMatrix` class, which stores scores of substitutions between
+sequence characters.
 
-Classes
--------
+
+Sequence types
+--------------
 
 .. autosummary::
    :toctree: generated/
@@ -32,18 +25,40 @@ Classes
    DNA
    RNA
    Protein
-   GeneticCode
 
-Subpackages
------------
+
+Sequence utilities
+------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   GeneticCode
+   SubstitutionMatrix
+
+
+Distance calculation
+--------------------
 
 .. autosummary::
    :toctree: generated/
 
    distance
 
-Examples
+
+Tutorial
 --------
+
+The primary information stored for each different type of sequence object is the
+underlying sequence data itself. This is stored as an immutable NumPy array.
+Additionally, each type of sequence may include optional metadata and positional
+metadata. Note that metadata and positional metadata are mutable.
+
+Common operations are defined as methods, for example computing the reverse complement
+of a DNA sequence, or searching for N-glycosylation motifs in protein sequences. Class
+attributes provide valid character sets, complement maps for different sequence types,
+and degenerate character definitions.
+
 New sequences are created with optional metadata and positional metadata.
 Metadata is stored as a Python ``dict``, while positional metadata is stored as
 a pandas ``DataFrame``.
@@ -294,14 +309,15 @@ Class-level methods contain information about the molecule types.
 >>> sorted(RNA.degenerate_map['B'])
 ['C', 'G', 'U']
 
-"""
+
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._sequence import Sequence
@@ -310,6 +326,14 @@ from ._dna import DNA
 from ._rna import RNA
 from ._genetic_code import GeneticCode
 from ._grammared_sequence import GrammaredSequence
+from ._substitution import SubstitutionMatrix
 
-__all__ = ['Sequence', 'Protein', 'DNA', 'RNA', 'GeneticCode',
-           'GrammaredSequence']
+__all__ = [
+    "Sequence",
+    "Protein",
+    "DNA",
+    "RNA",
+    "GeneticCode",
+    "GrammaredSequence",
+    "SubstitutionMatrix",
+]

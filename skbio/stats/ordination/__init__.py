@@ -1,30 +1,55 @@
-r"""
-Ordination methods (:mod:`skbio.stats.ordination`)
+r"""Ordination methods (:mod:`skbio.stats.ordination`)
 ==================================================
 
 .. currentmodule:: skbio.stats.ordination
 
-This module contains several ordination methods, including Principal
-Coordinate Analysis, Correspondence Analysis, Redundancy Analysis,
-Canonical Correspondence Analysis, Robust PCA, and Compositional
-Tensor Factorization.
+This module provides functions for ordination -- a category of methods that aim at
+arranging data so that similar data points are proximate to each other. Ordination can
+preserve and represent the structure of high-dimensional data within a low-dimensional
+space, thereby facilitating visual exploration and statistical analysis.
 
-Ordination Functions
---------------------
+Mathematically, ordination shares similarities with, and is in multiple respects
+equivalent to, embedding and dimensionality reduction. While all three aim to represent
+high-dimensional data in a lower-dimensional space, the term "ordination" is mainly
+used in the field of ecology to reveal patterns such as groups or gradients underlying
+community data. However, the ordination methods implemented in scikit-bio are
+versatile, serving not only ecological studies but also broader applications in
+scientific computing.
+
+
+Multidimensional scaling
+------------------------
+
+.. autosummary::
+   :toctree:
+
+   pcoa
+   pcoa_biplot
+
+
+Correspondence analysis
+-----------------------
 
 .. autosummary::
    :toctree:
 
    ca
-   pcoa
-   pcoa_biplot
+
+
+Canonical analysis
+------------------
+
+.. autosummary::
+   :toctree:
+
    cca
    rda
    rpca
    ctf
 
-Classes
--------
+
+Ordination results
+------------------
 
 .. autosummary::
    :toctree:
@@ -33,7 +58,8 @@ Classes
    OptSpace
    TensorFactorization
 
-Utility Functions
+
+Utility functions
 -----------------
 
 .. autosummary::
@@ -48,9 +74,9 @@ Utility Functions
    matrix_rclr
    tensor_rclr
 
+
 Examples
 --------
-
 This is an artificial dataset (table 11.3 in [1]_) that represents fish
 abundance in different sites (`Y`, the response variables) and
 environmental variables (`X`, the explanatory variables).
@@ -122,18 +148,18 @@ dtype: float64
 
 References
 ----------
-
 .. [1] Legendre P. and Legendre L. 1998. Numerical Ecology. Elsevier,
    Amsterdam.
 
-"""
+
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._redundancy_analysis import rda

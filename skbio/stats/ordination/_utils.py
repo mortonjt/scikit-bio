@@ -3,19 +3,16 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
 
-from skbio.util._decorator import experimental
+from ._cutils import center_distance_matrix_cy
 
 
-@experimental(as_of="0.4.0")
-def mean_and_std(a, axis=None, weights=None, with_mean=True, with_std=True,
-                 ddof=0):
-    """Compute the weighted average and standard deviation along the
-    specified axis.
+def mean_and_std(a, axis=None, weights=None, with_mean=True, with_std=True, ddof=0):
+    """Compute the weighted average and standard deviation along the specified axis.
 
     Parameters
     ----------
@@ -40,15 +37,18 @@ def mean_and_std(a, axis=None, weights=None, with_mean=True, with_std=True,
         dividing by `n - ddof` (where `n` is the number of
         elements). By default it computes the maximum likelyhood
         estimator.
+
     Returns
     -------
     average, std
         Return the average and standard deviation along the specified
         axis. If any of them was not required, returns `None` instead
+
     """
     if not (with_mean or with_std):
-        raise ValueError("Either the mean or standard deviation need to be"
-                         " computed.")
+        raise ValueError(
+            "Either the mean or standard deviation need to be" " computed."
+        )
     a = np.asarray(a)
     if weights is None:
         avg = a.mean(axis=axis) if with_mean else None
@@ -57,15 +57,14 @@ def mean_and_std(a, axis=None, weights=None, with_mean=True, with_std=True,
         avg = np.average(a, axis=axis, weights=weights)
         if with_std:
             if axis is None:
-                variance = np.average((a - avg)**2, weights=weights)
+                variance = np.average((a - avg) ** 2, weights=weights)
             else:
                 # Make sure that the subtraction to compute variance works for
                 # multidimensional arrays
                 a_rolled = np.rollaxis(a, axis)
                 # Numpy doesn't have a weighted std implementation, but this is
                 # stable and fast
-                variance = np.average((a_rolled - avg)**2, axis=0,
-                                      weights=weights)
+                variance = np.average((a_rolled - avg) ** 2, axis=0, weights=weights)
             if ddof != 0:  # Don't waste time if variance doesn't need scaling
                 if axis is None:
                     variance *= a.size / (a.size - ddof)
@@ -78,10 +77,8 @@ def mean_and_std(a, axis=None, weights=None, with_mean=True, with_std=True,
     return avg, std
 
 
-@experimental(as_of="0.4.0")
 def scale(a, weights=None, with_mean=True, with_std=True, ddof=0, copy=True):
-    """Scale array by columns to have weighted average 0 and standard
-    deviation 1.
+    """Scale array by columns to have weighted average 0 and standard deviation 1.
 
     Parameters
     ----------
@@ -112,12 +109,14 @@ def scale(a, weights=None, with_mean=True, with_std=True, ddof=0, copy=True):
     -----
     Wherever std equals 0, it is replaced by 1 in order to avoid
     division by zero.
+
     """
     if copy:
         a = a.copy()
     a = np.asarray(a, dtype=np.float64)
-    avg, std = mean_and_std(a, axis=0, weights=weights, with_mean=with_mean,
-                            with_std=with_std, ddof=ddof)
+    avg, std = mean_and_std(
+        a, axis=0, weights=weights, with_mean=with_mean, with_std=with_std, ddof=ddof
+    )
     if with_mean:
         a -= avg
     if with_std:
@@ -126,21 +125,20 @@ def scale(a, weights=None, with_mean=True, with_std=True, ddof=0, copy=True):
     return a
 
 
-@experimental(as_of="0.4.0")
 def svd_rank(M_shape, S, tol=None):
     """Matrix rank of `M` given its singular values `S`.
 
     See `np.linalg.matrix_rank` for a rationale on the tolerance
     (we're not using that function because it doesn't let us reuse a
-    precomputed SVD)."""
+    precomputed SVD).
+    """
     if tol is None:
         tol = S.max() * max(M_shape) * np.finfo(S.dtype).eps
     return np.sum(S > tol)
 
 
-@experimental(as_of="0.4.0")
 def corr(x, y=None):
-    """Computes correlation between columns of `x`, or `x` and `y`.
+    """Compute correlation between columns of `x`, or `x` and `y`.
 
     Correlation is covariance of (columnwise) standardized matrices,
     so each matrix is first centered and scaled to have variance one,
@@ -161,6 +159,7 @@ def corr(x, y=None):
     correlation
         Matrix of computed correlations. Has shape (p, p) if `y` is
         not provided, else has shape (p, q).
+
     """
     x = np.asarray(x)
     if y is not None:
@@ -177,12 +176,12 @@ def corr(x, y=None):
     return x.T.dot(y) / x.shape[0]
 
 
-@experimental(as_of="0.4.0")
 def e_matrix(distance_matrix):
     """Compute E matrix from a distance matrix.
 
     Squares and divides by -2 the input elementwise. Eq. 9.20 in
-    Legendre & Legendre 1998."""
+    Legendre & Legendre 1998.
+    """
     return distance_matrix * distance_matrix / -2
 
 
@@ -191,7 +190,8 @@ def f_matrix(E_matrix):
 
     Centring step: for each element, the mean of the corresponding
     row and column are substracted, and the mean of the whole
-    matrix is added. Eq. 9.21 in Legendre & Legendre 1998."""
+    matrix is added. Eq. 9.21 in Legendre & Legendre 1998.
+    """
     row_means = E_matrix.mean(axis=1, keepdims=True)
     col_means = E_matrix.mean(axis=0, keepdims=True)
     matrix_mean = E_matrix.mean()
@@ -199,8 +199,7 @@ def f_matrix(E_matrix):
 
 
 def center_distance_matrix(distance_matrix, inplace=False):
-    """
-    Centers a distance matrix.
+    """Centers a distance matrix.
 
     Note: If the used distance was euclidean, pairwise distances
     needn't be computed from the data table Y because F_matrix =
@@ -216,16 +215,24 @@ def center_distance_matrix(distance_matrix, inplace=False):
     inplace : bool, optional
         Whether or not to center the given distance matrix in-place, which
         is more efficient in terms of memory and computation.
+
     """
+    if not distance_matrix.flags.c_contiguous:
+        # center_distance_matrix_cy requires c_contiguous, so make a copy
+        distance_matrix = np.asarray(distance_matrix, order="C")
+
     if inplace:
-        return _f_matrix_inplace(_e_matrix_inplace(distance_matrix))
+        center_distance_matrix_cy(distance_matrix, distance_matrix)
+        return distance_matrix
     else:
-        return f_matrix(e_matrix(distance_matrix))
+        centered = np.empty(distance_matrix.shape, distance_matrix.dtype)
+        center_distance_matrix_cy(distance_matrix, centered)
+        return centered
 
 
 def _e_matrix_inplace(distance_matrix):
-    """
-    Compute E matrix from a distance matrix inplace.
+    """Compute E matrix from a distance matrix inplace.
+
     Squares and divides by -2 the input element-wise. Eq. 9.20 in
     Legendre & Legendre 1998.
 
@@ -236,8 +243,9 @@ def _e_matrix_inplace(distance_matrix):
     ----------
     distance_matrix : 2D array_like
         Distance matrix.
+
     """
-    distance_matrix = distance_matrix.astype(np.float)
+    distance_matrix = distance_matrix.astype(float)
 
     for i in np.arange(len(distance_matrix)):
         distance_matrix[i] = (distance_matrix[i] * distance_matrix[i]) / -2
@@ -245,8 +253,8 @@ def _e_matrix_inplace(distance_matrix):
 
 
 def _f_matrix_inplace(e_matrix):
-    """
-    Compute F matrix from E matrix inplace.
+    """Compute F matrix from E matrix inplace.
+
     Centering step: for each element, the mean of the corresponding
     row and column are subtracted, and the mean of the whole
     matrix is added. Eq. 9.21 in Legendre & Legendre 1998.
@@ -258,8 +266,9 @@ def _f_matrix_inplace(e_matrix):
     ----------
     e_matrix : 2D array_like
         A matrix representing the "E matrix" as described above.
+
     """
-    e_matrix = e_matrix.astype(np.float)
+    e_matrix = e_matrix.astype(float)
 
     row_means = np.zeros(len(e_matrix), dtype=float)
     col_means = np.zeros(len(e_matrix), dtype=float)

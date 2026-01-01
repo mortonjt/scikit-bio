@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from functools import partial
@@ -12,14 +12,14 @@ from unittest import TestCase, main
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
-from pandas.util.testing import assert_series_equal
+from pandas.testing import assert_series_equal
 from scipy.stats import f_oneway
-import hdmedians as hd
 
 from skbio import DistanceMatrix
 from skbio.stats.ordination import pcoa
 from skbio.stats.distance import permdisp
 from skbio.stats.distance._permdisp import _compute_groups
+from skbio.stats.distance._cutils import geomedian_axis_one
 from skbio.util import get_data_path
 
 
@@ -193,6 +193,35 @@ class testPERMDISP(TestCase):
 
         self.assert_series_equal(obs, exp)
 
+        np.random.seed(0)
+        po = pcoa(self.unifrac_dm)
+
+        obs2 = permdisp(po, self.unif_grouping, test='median',
+                        permutations=99)
+
+        self.assert_series_equal(obs2, exp)
+
+    def test_median_fsvd(self):
+
+        exp = pd.Series(index=self.exp_index,
+                        data=['PERMDISP', 'F-value', 9, 2, 0.04078077215673714,
+                              0.8, 99],
+                        name='PERMDISP results')
+
+        np.random.seed(0)
+        obs = permdisp(self.unifrac_dm, self.unif_grouping, test='median',
+                       permutations=99,
+                       method='fsvd', number_of_dimensions=3)
+
+        self.assert_series_equal(obs, exp)
+
+        np.random.seed(0)
+        po = pcoa(self.unifrac_dm, method='fsvd', number_of_dimensions=3)
+        obs = permdisp(po, self.unif_grouping, test='median',
+                       permutations=99)
+
+        self.assert_series_equal(obs, exp)
+
     def test_not_distance_matrix(self):
         dm = []
         grouping = ['Control', 'Control', 'Control', 'Control', 'Control',
@@ -216,10 +245,10 @@ class testPERMDISP(TestCase):
         pval = obs['p-value']
         np.isnan(pval)
 
-    def test_hdmedians(self):
+    def test_geomedian(self):
         exp = np.array([2.01956244, 1.53164546, 2.60571752, 0.91424179,
                         1.76214416, 1.69943057])
-        obs = np.array(hd.geomedian(self.eq_mat.data))
+        obs = np.array(geomedian_axis_one(self.eq_mat.data))
         npt.assert_almost_equal(obs, exp, decimal=6)
 
     def test_confirm_betadispr_results(self):
@@ -247,6 +276,24 @@ class testPERMDISP(TestCase):
         self.assert_series_equal(exp_med_mp, obs_med_mp)
 
         self.assert_series_equal(exp_cen_mp, obs_cen_mp)
+
+    def test_call_via_series(self):
+        # test https://github.com/scikit-bio/scikit-bio/issues/1877
+        # actual issue is with _base._preprocess_input_sng but permdisp is
+        # indirectly affected
+        dm = DistanceMatrix.read(get_data_path('frameSeries_dm.tsv'))
+        grouping = pd.read_csv(get_data_path("frameSeries_grouping.tsv"),
+                               sep="\t", index_col=0)
+
+        np.random.seed(0)
+        obs_frame = permdisp(dm, grouping, column='tumor')
+
+        np.random.seed(0)
+        obs_series = permdisp(dm, grouping['tumor'])
+
+        # in principle, both tests - if seed is the same - should return the
+        # exact same results. However, they don't for the current example ...
+        self.assert_series_equal(obs_frame, obs_series)
 
 
 if __name__ == '__main__':

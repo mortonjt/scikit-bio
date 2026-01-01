@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 # Special thanks to http://www.faculty.ucr.edu/~mmaduro/random.htm for the
@@ -19,9 +19,8 @@
 from unittest import TestCase, main
 
 from skbio import (local_pairwise_align_ssw, Sequence, DNA, RNA, Protein,
-                   TabularMSA)
+                   SubstitutionMatrix, TabularMSA)
 from skbio.alignment import StripedSmithWaterman, AlignmentStructure
-from skbio.alignment._pairwise import blosum50
 
 
 class TestSSW(TestCase):
@@ -32,6 +31,8 @@ class TestSSW(TestCase):
         "query_begin", "query_end", "cigar", "query_sequence",
         "target_sequence"
     ]
+
+    blosum50 = SubstitutionMatrix.by_name('BLOSUM50').to_dict()
 
     def _check_alignment(self, alignment, expected):
         for attribute in self.align_attributes:
@@ -85,7 +86,7 @@ class TestSSW(TestCase):
         kwarg = {}
 
         def falsy_or_negative(alignment, prop):
-            if type(alignment[prop]) is int:
+            if isinstance(alignment[prop], int):
                 return alignment[prop] < 0
             else:
                 return not alignment[prop]
@@ -230,7 +231,7 @@ class TestStripedSmithWaterman(TestSSW):
         }
         query = StripedSmithWaterman(expected['query_sequence'],
                                      protein=True,
-                                     substitution_matrix=blosum50)
+                                     substitution_matrix=self.blosum50)
         alignment = query(expected['target_sequence'])
         self._check_alignment(alignment, expected)
 
@@ -557,6 +558,7 @@ class TestStripedSmithWaterman(TestSSW):
 
 
 class TestAlignStripedSmithWaterman(TestSSW):
+
     def _check_TabularMSA_to_AlignmentStructure(self, alignment, structure,
                                                 expected_dtype):
         msa, score, start_end = alignment
@@ -592,11 +594,11 @@ class TestAlignStripedSmithWaterman(TestSSW):
         target_sequence = 'PAWHEAE'
         query = StripedSmithWaterman(query_sequence,
                                      protein=True,
-                                     substitution_matrix=blosum50)
+                                     substitution_matrix=self.blosum50)
         align1 = query(target_sequence)
         align2 = local_pairwise_align_ssw(Protein(query_sequence),
                                           Protein(target_sequence),
-                                          substitution_matrix=blosum50)
+                                          substitution_matrix=self.blosum50)
         self._check_TabularMSA_to_AlignmentStructure(align2, align1, Protein)
 
     def test_kwargs_are_usable(self):
@@ -694,7 +696,7 @@ class TestAlignmentStructure(TestSSW):
                 'begin': 4,
                 'end_after_cigar': 2,
                 'gap_type': 'I',
-                'expected': "5678---9abcdefghijklmnop"
+                'expected': "5678---9abcdefghijklmnopq"
             },
             {
                 'cigar_tuples': [
@@ -712,7 +714,7 @@ class TestAlignmentStructure(TestSSW):
                 'begin': 0,
                 'end_after_cigar': 5,
                 'gap_type': 'I',
-                'expected': "1---2345678"
+                'expected': "123456789ab---cdefghi"
             },
             {
                 'cigar_tuples': [
@@ -721,7 +723,7 @@ class TestAlignmentStructure(TestSSW):
                 'begin': 3,
                 'end_after_cigar': 0,
                 'gap_type': 'D',
-                'expected': "----------456"
+                'expected': "----------456789"
             },
             {
                 'cigar_tuples': [
@@ -731,7 +733,7 @@ class TestAlignmentStructure(TestSSW):
                 'begin': 4,
                 'end_after_cigar': 3,
                 'gap_type': 'I',
-                'expected': "-5678---9abcdefg--hijklm-nop"
+                'expected': "-5678---9abcdefghijklmnop--qrstuv-wxy"
             }
         ]
         for test in tests:
@@ -742,7 +744,8 @@ class TestAlignmentStructure(TestSSW):
             # verify interface of `end_after_cigar` to cancel this range effect
             # out.
             end = test['end_after_cigar'] - 1 + test['begin'] + \
-                sum([le if t == 'M' else 0 for le, t in test['cigar_tuples']])
+                sum(le if t != test['gap_type'] else 0
+                    for le, t in test['cigar_tuples'])
             self.assertEqual(test['expected'],
                              AlignmentStructure._get_aligned_sequence(
                                  mock_object, generic_sequence,
@@ -752,7 +755,7 @@ class TestAlignmentStructure(TestSSW):
     def test_aligned_query_target_sequence(self):
         query = StripedSmithWaterman("AGGGTAATTAGGCGTGTTCACCTA")
         alignment = query("AGTCGAAGGGTAATATAGGCGTGTCACCTA")
-        self.assertEqual("AGGGTAATATAGGCGT-GTCACCTA",
+        self.assertEqual("AGGGTAATATAGGCGTG-TCACCTA",
                          alignment.aligned_target_sequence)
         self.assertEqual("AGGGTAAT-TAGGCGTGTTCACCTA",
                          alignment.aligned_query_sequence)

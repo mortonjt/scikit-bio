@@ -1,50 +1,106 @@
-"""
-Diversity calculations (:mod:`skbio.diversity`)
-===============================================
+r"""Community Diversity (:mod:`skbio.diversity`)
+============================================
 
 .. currentmodule:: skbio.diversity
 
-This package provides functionality for analyzing biological diversity. It
-implements metrics of alpha and beta diversity, and provides two "driver
-functions" that are intended to be the primary interface for computing alpha
-and beta diversity with scikit-bio. Functions are additionally provided that
-support discovery of the available diversity metrics. This document provides a
-high-level discussion of how to work with the ``skbio.diversity`` module, and
-should be the first document you read before working with the module.
+This module provides functionality for analyzing biodiversity of communities
+-- groups of organisms living in the same area. It implements various metrics
+of alpha (within-community) and beta (between-community) diversity, and
+provides "driver functions" for computing alpha and beta diversity for an
+entire data table. Additional utilities are provided to support discovery of
+available diversity metrics. While diversity metrics were originally designed
+to study biological communities, they can be generalized to the analysis of
+various biological data types.
 
-Driver functions
-----------------
 
-The driver functions, ``skbio.diversity.alpha_diversity`` and
-``skbio.diversity.beta_diversity``, are designed to compute alpha diversity for
-one or more samples, or beta diversity for one or more pairs of samples. The
-diversity driver functions accept a matrix containing vectors of frequencies of
-OTUs within each sample.
+Alpha diversity
+---------------
 
-We use the term "OTU" here very loosely, as these can in practice represent
-diverse feature types including bacterial species, genes, and metabolites. The
-term "sample" is also loosely defined for these purposes. These are intended to
-represent a single unit of sampling, and as such what a single sample
-represents can vary widely. For example, in a microbiome survey, these could
-represent all 16S rRNA gene sequences from a single oral swab. In a comparative
-genomics study on the other hand, a sample could represent an individual
-organism's genome.
+.. rubric:: Alpha diversity metrics
+
+.. autosummary::
+   :toctree: generated/
+
+   alpha
+   get_alpha_diversity_metrics
+
+.. rubric:: Driver function
+
+.. autosummary::
+   :toctree: generated/
+
+   alpha_diversity
+
+
+Beta diversity
+--------------
+
+.. rubric:: Beta diversity metrics
+
+.. autosummary::
+   :toctree: generated/
+
+   beta
+   get_beta_diversity_metrics
+
+.. rubric:: Driver functions
+
+.. autosummary::
+   :toctree: generated/
+
+   beta_diversity
+   partial_beta_diversity
+   block_beta_diversity
+
+
+Introduction
+------------
+
+A community (i.e., sample) is represented by a vector of frequencies of taxa
+within the sample. The term "taxon" (plural: "taxa") describes a group of
+biologically related organisms that constitute a unit in the community. Taxa
+are usually defined at a uniform taxonomic rank, such as species, genus or
+family. In community ecology, taxon is usually referred to as "species"
+(singular = plural), but its definition is not limited to species as a
+taxonomic rank. The term "taxonomic group" is a synonym of taxon in many
+situations.
+
+In scikit-bio, the term "taxon/taxa" is used very loosely, as these can in
+practice represent diverse feature types including organisms, genes, and
+metabolites. The term "sample" is also loosely defined for these purposes.
+These are intended to represent a single unit of sampling, and as such what a
+single sample represents can vary widely. For example, in a microbiome survey,
+these could represent all 16S rRNA gene sequences from a single oral swab. In
+a comparative genomics study on the other hand, a sample could represent an
+individual organism's genome.
+
+.. note::
+
+   Previous versions of scikit-bio referred to taxon as operational taxonomic
+   unit (OTU), a historically important term in microbiome research. However,
+   as the field advances and the research targets diverge (e.g., amplicon
+   sequence variant, or ASV), a more generic term such as "taxon" becomes more
+   appropriate. Therefore, the term OTU was replaced by taxon in scikit-bio
+   0.6.0.
 
 Each frequency in a given vector represents the number of individuals observed
-for a particular OTU. We will refer to the frequencies associated with a single
-sample as a *counts vector* or ``counts`` throughout the documentation. Counts
-vectors are `array_like`: anything that can be converted into a 1-D numpy array
-is acceptable input. For example, you can provide a numpy array or a native
-Python list and the results will be identical. As mentioned above, the driver
-functions accept one or more of these vectors (representing one or more
-samples) in a matrix which is also `array_like`. Each row in the matrix
-represents a single sample's count vector, so that rows represent samples and
-columns represent OTUs.
+for a particular taxon. We will refer to the frequencies associated with a
+single sample as a *counts vector* or ``counts`` throughout the documentation.
+Counts vectors are `array_like`: anything that can be converted into a 1-D
+numpy array is acceptable input. For example, you can provide a numpy array or
+a native Python list and the results will be identical.
 
-Some diversity metrics incorporate relationships between the OTUs in their
+The driver functions :func:`alpha_diversity` and :func:`beta_diversity` are
+designed to compute alpha diversity for one or more samples, or beta diversity
+for one or more pairs of samples. The driver functions accept a matrix
+containing vectors of frequencies of taxa within each sample. Each row in the
+matrix represents a single sample's count vector, so that rows represent
+samples and columns represent taxa.
+
+Some diversity metrics incorporate relationships between the taxa in their
 computation through reference to a phylogenetic tree. These metrics
-additionally take a ``skbio.TreeNode`` object and a list of OTU identifiers
-mapping the values in the counts vector to tips in the tree.
+additionally take a :class:`skbio.TreeNode` object and a list of taxa mapping
+the values in the counts vector to tips in the tree.
 
 The driver functions are optimized so that computing a diversity metric more
 than one time (i.e., for more than one sample for alpha diversity metrics, or
@@ -57,7 +113,7 @@ counts vectors in the matrix, and the ``beta_diversity`` driver function will
 compute beta diversity for all pairs of counts vectors in the matrix.
 
 Input validation
-----------------
+^^^^^^^^^^^^^^^^
 
 The driver functions perform validation of input by default. Validation can be
 slow so it is possible to disable this step by passing ``validate=False``. This
@@ -78,45 +134,45 @@ validation, users should be confident that these conditions are met.
 Additionally, if a phylogenetic diversity metric is being computed, the
 following conditions are also confirmed:
 
-* the provided OTU identifiers are all unique
-* the length of each counts vector is equal to the number of OTU identifiers
+* the provided taxa are all unique
+* the length of each counts vector is equal to the number of taxa
 * the provided tree is rooted
 * the tree has more than one node
 * all nodes in the provided tree except for the root node have branch lengths
 * all tip names in the provided tree are unique
-* all provided OTU identifiers correspond to tip names in the provided tree
+* all provided taxa correspond to tip names in the provided tree
 
 Count vectors
--------------
+^^^^^^^^^^^^^
 
 There are different ways that count vectors are represented in the ecological
 literature and in related software. The diversity measures provided here
 *always* assume that the input contains abundance data: each count represents
-the number of individuals observed for a particular OTU in the sample. For
-example, if you have two OTUs, where three individuals were observed from the
-first OTU and only a single individual was observed from the second OTU, you
-could represent this data in the following forms (among others).
+the number of individuals observed for a particular taxon in the sample. For
+example, if you have two taxa, where three individuals were observed from the
+first taxon and only a single individual was observed from the second taxon,
+you could represent this data in the following forms (among others).
 
 As a vector of counts. This is the expected type of input for the diversity
-measures in this module. There are 3 individuals from the OTU at index 0, and 1
-individual from the OTU at index 1:
+measures in this module. There are 3 individuals from the taxon at index 0,
+and 1 individual from the taxon at index 1:
 
 >>> counts = [3, 1]
 
-As a vector of indices. The OTU at index 0 is observed 3 times, while the
-OTU at index 1 is observed 1 time:
+As a vector of indices. The taxon at index 0 is observed 3 times, while the
+taxon at index 1 is observed 1 time:
 
 >>> indices = [0, 0, 0, 1]
 
-As a vector of frequencies. We have 1 OTU that is a singleton and 1 OTU that
-is a tripleton. We do not have any 0-tons or doubletons:
+As a vector of frequencies. We have 1 taxon that is a singleton and 1 taxon
+that is a tripleton. We do not have any 0-tons or doubletons:
 
 >>> frequencies = [0, 1, 0, 1]
 
 Always use the first representation (a counts vector) with this module.
 
 Specifying a diversity metric
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The driver functions take a parameter, ``metric``, that specifies which
 diversity metric should be applied. The value that you provide for ``metric``
@@ -139,38 +195,16 @@ run is not one that scikit-bio knows about. This might be the case, for
 example, if you're applying a custom metric that you've developed. To discover
 the metric names that scikit-bio knows about as strings that can be passed as
 ``metric`` to ``alpha_diversity`` or ``beta_diversity``, you can call
-``get_alpha_diversity_metrices`` or ``get_beta_diversity_metrics``,
+``get_alpha_diversity_metrics`` or ``get_beta_diversity_metrics``,
 respectively. These functions return lists of alpha and beta diversity metrics
 that are implemented in scikit-bio. There may be additional metrics that can be
 passed as strings which won't be listed here, such as those implemented in
 ``scipy.spatial.distance.pdist``.
 
-Subpackages
------------
 
-.. autosummary::
-   :toctree: generated/
-
-   alpha
-   beta
-
-Functions
----------
-
-.. autosummary::
-   :toctree: generated/
-
-    alpha_diversity
-    beta_diversity
-    partial_beta_diversity
-    block_beta_diversity
-    get_alpha_diversity_metrics
-    get_beta_diversity_metrics
-
-Examples
+Tutorial
 --------
-
-Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
+Create a matrix containing 6 samples (rows) and 7 taxa (columns):
 
 .. plot::
    :context:
@@ -183,12 +217,12 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
    ...         [0, 0, 25, 35, 0, 19, 0]]
    >>> ids = list('ABCDEF')
 
-   First, we'll compute observed OTUs, an alpha diversity metric, for each
+   First, we'll compute :math:`S_{obs}`, an alpha diversity metric, for each
    sample using the ``alpha_diversity`` driver function:
 
    >>> from skbio.diversity import alpha_diversity
-   >>> adiv_obs_otus = alpha_diversity('observed_otus', data, ids)
-   >>> adiv_obs_otus
+   >>> adiv_sobs = alpha_diversity('sobs', data, ids)
+   >>> adiv_sobs
    A    5
    B    5
    C    4
@@ -199,17 +233,17 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
 
    Next we'll compute Faith's PD on the same samples. Since this is a
    phylogenetic diversity metric, we'll first create a tree and an ordered
-   list of OTU identifiers.
+   list of taxa.
 
    >>> from skbio import TreeNode
    >>> from io import StringIO
    >>> tree = TreeNode.read(StringIO(
-   ...                      '(((((OTU1:0.5,OTU2:0.5):0.5,OTU3:1.0):1.0):0.0,'
-   ...                      '(OTU4:0.75,(OTU5:0.5,(OTU6:0.5,OTU7:0.5):0.5):'
+   ...                      '(((((U1:0.5,U2:0.5):0.5,U3:1.0):1.0):0.0,'
+   ...                      '(U4:0.75,(U5:0.5,(U6:0.5,U7:0.5):0.5):'
    ...                      '0.5):1.25):0.0)root;'))
-   >>> otu_ids = ['OTU1', 'OTU2', 'OTU3', 'OTU4', 'OTU5', 'OTU6', 'OTU7']
+   >>> taxa = ['U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7']
    >>> adiv_faith_pd = alpha_diversity('faith_pd', data, ids=ids,
-   ...                                 otu_ids=otu_ids, tree=tree)
+   ...                                 taxa=taxa, tree=tree)
    >>> adiv_faith_pd
    A    6.75
    B    7.00
@@ -240,11 +274,11 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
 
    Next, we'll compute weighted UniFrac distances between all pairs of samples.
    Because weighted UniFrac is a phylogenetic beta diversity metric, we'll need
-   to pass the ``skbio.TreeNode`` and list of OTU ids that we created above.
+   to pass the ``skbio.TreeNode`` and list of taxa that we created above.
    Again, these are the same values that were provided to ``alpha_diversity``.
 
    >>> wu_dm = beta_diversity("weighted_unifrac", data, ids, tree=tree,
-   ...                        otu_ids=otu_ids)
+   ...                        taxa=taxa)
    >>> print(wu_dm)
    6x6 distance matrix
    IDs:
@@ -302,9 +336,12 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
    Now let's plot our PCoA results, coloring each sample by the subject it
    was taken from:
 
-   >>> fig = wu_pc.plot(sample_md, 'subject',
-   ...                  axis_labels=('PC 1', 'PC 2', 'PC 3'),
-   ...                  title='Samples colored by subject', cmap='jet', s=50)
+   >>> fig = wu_pc.plot(
+   ...     sample_md, 'subject',
+   ...     axis_labels=('PC 1', 'PC 2', 'PC 3'),
+   ...     title='Samples colored by subject',
+   ...     cmap='jet', s=50
+   ... )  # doctest: +SKIP
 
 .. plot::
    :context:
@@ -315,11 +352,12 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
    closer to one another in the 3-D space then they are to samples from
    other body sites.
 
-   >>> import matplotlib.pyplot as plt
-   >>> plt.close('all') # not necessary for normal use
-   >>> fig = wu_pc.plot(sample_md, 'body_site',
-   ...                  axis_labels=('PC 1', 'PC 2', 'PC 3'),
-   ...                  title='Samples colored by body site', cmap='jet', s=50)
+   >>> fig = wu_pc.plot(
+   ...     sample_md, 'body_site',
+   ...     axis_labels=('PC 1', 'PC 2', 'PC 3'),
+   ...     title='Samples colored by body site',
+   ...     cmap='jet', s=50
+   ... )  # doctest: +SKIP
 
 .. plot::
    :context:
@@ -355,15 +393,15 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
    The p-value is significant at an alpha of 0.1.
 
    We can also explore the alpha diversity in the context of sample metadata.
-   To do this, let's add the Observed OTU and Faith PD data to our sample
-   metadata. This is straight-forward beause ``alpha_diversity`` returns a
-   Pandas ``Series`` object, and we're representing our sample metadata in a
-   Pandas ``DataFrame`` object.
+   To do this, let's add the observed richness and Faith's PD metrics to our
+   sample metadata. This is straight-forward because ``alpha_diversity``
+   returns a Pandas ``Series`` object, and we're representing our sample
+   metadata in a Pandas ``DataFrame`` object.
 
-   >>> sample_md['Observed OTUs'] = adiv_obs_otus
+   >>> sample_md['Obs. richness'] = adiv_sobs
    >>> sample_md['Faith PD'] = adiv_faith_pd
    >>> sample_md
-     body_site subject  Observed OTUs  Faith PD
+     body_site subject  Obs. richness  Faith PD
    A       gut      s1              5      6.75
    B      skin      s1              5      7.00
    C    tongue      s1              4      6.25
@@ -375,34 +413,43 @@ Create a matrix containing 6 samples (rows) and 7 OTUs (columns):
    categories. For example, we can generate boxplots showing Faith PD by body
    site.
 
-   >>> import matplotlib.pyplot as plt
-   >>> plt.close('all') # not necessary for normal use
-   >>> fig = sample_md.boxplot(column='Faith PD', by='body_site')
+   >>> fig = sample_md.boxplot(column='Faith PD', by='body_site')  # doctest: +SKIP
 
 We can also compute Spearman correlations between all pairs of columns in
 this ``DataFrame``. Since our alpha diversity metrics are the only two
 numeric columns (and thus the only columns for which Spearman correlation
 is relevant), this will give us a symmetric 2x2 correlation matrix.
 
->>> sample_md.corr(method="spearman")
-               Observed OTUs  Faith PD
-Observed OTUs       1.000000  0.939336
+>>> sample_md.corr(method="spearman", numeric_only=True)
+               Obs. richness  Faith PD
+Obs. richness       1.000000  0.939336
 Faith PD            0.939336  1.000000
 
-"""
+
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from ._driver import (alpha_diversity, beta_diversity, partial_beta_diversity,
-                      get_alpha_diversity_metrics, get_beta_diversity_metrics)
+from ._driver import (
+    alpha_diversity,
+    beta_diversity,
+    partial_beta_diversity,
+    get_alpha_diversity_metrics,
+    get_beta_diversity_metrics,
+)
 from ._block import block_beta_diversity
 
-__all__ = ["alpha_diversity", "beta_diversity", "get_alpha_diversity_metrics",
-           "get_beta_diversity_metrics", "partial_beta_diversity",
-           "block_beta_diversity"]
+__all__ = [
+    "alpha_diversity",
+    "beta_diversity",
+    "get_alpha_diversity_metrics",
+    "get_beta_diversity_metrics",
+    "partial_beta_diversity",
+    "block_beta_diversity",
+]

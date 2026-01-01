@@ -1,6 +1,5 @@
-r"""
-Tree representations (:mod:`skbio.tree`)
-========================================
+r"""Trees and Phylogenetics (:mod:`skbio.tree`)
+===========================================
 
 .. currentmodule:: skbio.tree
 
@@ -10,15 +9,17 @@ trees, for traversing in multiple ways, comparisons, fetching subtrees, and
 more. This module supports trees that are multifurcating and nodes that have
 single descendants.
 
-Classes
--------
+
+Tree structure and operations
+-----------------------------
 
 .. autosummary::
    :toctree: generated/
 
     TreeNode
 
-Phylogenetic Reconstruction
+
+Phylogenetic reconstruction
 ---------------------------
 
 .. autosummary::
@@ -26,19 +27,20 @@ Phylogenetic Reconstruction
 
     nj
 
-Utility Functions
------------------
+
+Tree utilities
+--------------
 
 .. autosummary::
    :toctree: generated/
 
     majority_rule
 
+
 Exceptions
-----------
+^^^^^^^^^^
 
 .. autosummary::
-   :toctree: generated/
 
    TreeError
    NoLengthError
@@ -46,7 +48,8 @@ Exceptions
    MissingNodeError
    NoParentError
 
-Examples
+
+Tutorial
 --------
 
 >>> from skbio import TreeNode
@@ -171,21 +174,35 @@ pairwise tip-to-tip distances between trees:
 >>> print(tree1.compare_tip_distances(tree2))
 0.120492524415
 
-"""
+
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._tree import TreeNode
 from ._nj import nj
 from ._majority_rule import majority_rule
-from ._exception import (TreeError, NoLengthError, DuplicateNodeError,
-                         MissingNodeError, NoParentError)
+from ._exception import (
+    TreeError,
+    NoLengthError,
+    DuplicateNodeError,
+    MissingNodeError,
+    NoParentError,
+)
 
-__all__ = ['TreeNode', 'nj', 'majority_rule', 'TreeError', 'NoLengthError',
-           'DuplicateNodeError', 'MissingNodeError', 'NoParentError']
+__all__ = [
+    "TreeNode",
+    "nj",
+    "majority_rule",
+    "TreeError",
+    "NoLengthError",
+    "DuplicateNodeError",
+    "MissingNodeError",
+    "NoParentError",
+]

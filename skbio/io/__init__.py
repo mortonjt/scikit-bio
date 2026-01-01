@@ -1,24 +1,29 @@
-r"""
-File I/O (:mod:`skbio.io`)
-==========================
+r"""Input and Output (:mod:`skbio.io`)
+==================================
 
 .. currentmodule:: skbio.io
 
-This package provides I/O functionality for skbio.
+This module provides input/output (I/O) functionality for scikit-bio.
+
 
 Supported file formats
 ----------------------
-For details on what objects are supported by each format,
-see the associated documentation.
+
+scikit-bio provides parsers for the following file formats. For details on what objects
+are supported by each format, see the associated documentation.
 
 .. currentmodule:: skbio.io.format
+
 .. autosummary::
    :toctree: generated/
 
+   binary_dm
+   biom
    blast6
    blast7
    clustal
    embl
+   embedding
    fasta
    fastq
    genbank
@@ -29,12 +34,16 @@ see the associated documentation.
    phylip
    qseq
    stockholm
+   taxdump
+   sample_metadata
+
+
+Read/write files
+----------------
+
+.. rubric:: Generic I/O functions
 
 .. currentmodule:: skbio.io.registry
-
-
-User functions
---------------
 
 .. autosummary::
    :toctree: generated/
@@ -43,19 +52,46 @@ User functions
    read
    sniff
 
-.. currentmodule:: skbio.io
+.. rubric:: Additional I/O utilities
 
-User exceptions and warnings
-----------------------------
+.. currentmodule:: skbio.io
 
 .. autosummary::
    :toctree: generated/
+
+   util
+
+
+Develop custom formats
+----------------------
+
+.. rubric:: Developer documentation on extending I/O
+
+.. autosummary::
+   :toctree: generated/
+
+   registry
+
+
+Exceptions and warnings
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. currentmodule:: skbio.io
+
+.. rubric:: General exceptions and warnings
+
+.. autosummary::
 
    FormatIdentificationWarning
    ArgumentOverrideWarning
    UnrecognizedFormatError
    IOSourceError
    FileFormatError
+
+.. rubric:: Format-specific exceptions and warnings
+
+.. autosummary::
+
    BLAST7FormatError
    ClustalFormatError
    EMBLFormatError
@@ -72,27 +108,17 @@ User exceptions and warnings
    StockholmFormatError
 
 
-Subpackages
------------
+Tutorial
+--------
 
-.. autosummary::
-   :toctree: generated/
-
-   registry
-   util
-
-For developer documentation on extending I/O, see :mod:`skbio.io.registry`.
-
-Introduction to I/O
--------------------
 Reading and writing files (I/O) can be a complicated task:
 
-* A file format can sometimes be read into more than one in-memory
-  representation (i.e., object). For example, a FASTA file can be read into an
-  :mod:`skbio.alignment.TabularMSA` or :mod:`skbio.sequence.DNA` depending on
+* A file format can sometimes be read into more than one in-memory representation
+  (i.e., object). For example, a FASTA file can be read into an
+  :class:`skbio.alignment.TabularMSA` or :class:`skbio.sequence.DNA` depending on
   what operations you'd like to perform on your data.
-* A single object might be writeable to more than one file format. For example,
-  an :mod:`skbio.alignment.TabularMSA` object could be written to FASTA, FASTQ,
+* A single object might be writeable to more than one file format. For example, an
+  :class:`skbio.alignment.TabularMSA` object could be written to FASTA, FASTQ,
   CLUSTAL, or PHYLIP formats, just to name a few.
 * You might not know the exact file format of your file, but you want to read
   it into an appropriate object.
@@ -126,7 +152,7 @@ constructed from the procedural interface:
 
    my_obj = SomeSkbioClass.read(file, format='someformat')
 
-For example, to read a `newick` file using both interfaces you would type:
+For example, to read a ``newick`` file using both interfaces you would type:
 
 >>> from skbio import read
 >>> from skbio import TreeNode
@@ -143,14 +169,14 @@ For the OO interface:
 >>> tree
 <TreeNode, name: unnamed, internal node count: 0, tips count: 2>
 
-In the case of :func:`skbio.io.registry.read` if `into` is not provided, then a
+In the case of :func:`skbio.io.registry.read` if ``into`` is not provided, then a
 generator will be returned. What the generator yields will depend on what
 format is being read.
 
-When `into` is provided, format may be omitted and the registry will use its
+When ``into`` is provided, format may be omitted and the registry will use its
 knowledge of the available formats for the requested class to infer the correct
 format. This format inference is also available in the OO interface, meaning
-that `format` may be omitted there as well.
+that ``format`` may be omitted there as well.
 
 As an example:
 
@@ -159,12 +185,12 @@ As an example:
 >>> tree
 <TreeNode, name: unnamed, internal node count: 0, tips count: 2>
 
-We call format inference `sniffing`, much like the :class:`csv.Sniffer`
-class of Python's standard library. The goal of a `sniffer` is twofold: to
-identify if a file is a specific format, and if it is, to provide `**kwargs`
+We call format inference **sniffing**, much like the :class:`csv.Sniffer`
+class of Python's standard library. The goal of a ``sniffer`` is two-fold: to
+identify if a file is a specific format, and if it is, to provide ``**kwargs``
 which can be used to better parse the file.
 
-.. note:: There is a built-in `sniffer` which results in a useful error message
+.. note:: There is a built-in ``sniffer`` which results in a useful error message
    if an empty file is provided as input and the format was omitted.
 
 Writing files from scikit-bio
@@ -183,78 +209,104 @@ OO Interface:
 
    my_obj.write(file, format='someformat')
 
-In the procedural interface, `format` is required. Without it, scikit-bio does
+In the procedural interface, ``format`` is required. Without it, scikit-bio does
 not know how you want to serialize an object. OO interfaces define a default
-`format`, so it may not be necessary to include it.
+``format``, so it may not be necessary to include it.
 
 
-"""
+"""  # noqa: D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from importlib import import_module
 
 from ._warning import FormatIdentificationWarning, ArgumentOverrideWarning
-from ._exception import (UnrecognizedFormatError, FileFormatError,
-                         BLAST7FormatError, ClustalFormatError,
-                         FASTAFormatError, GenBankFormatError, IOSourceError,
-                         FASTQFormatError, LSMatFormatError, NewickFormatError,
-                         OrdinationFormatError, PhylipFormatError,
-                         QSeqFormatError, QUALFormatError,
-                         StockholmFormatError, GFF3FormatError,
-                         EMBLFormatError)
+from ._exception import (
+    UnrecognizedFormatError,
+    FileFormatError,
+    BLAST7FormatError,
+    ClustalFormatError,
+    FASTAFormatError,
+    GenBankFormatError,
+    IOSourceError,
+    FASTQFormatError,
+    LSMatFormatError,
+    NewickFormatError,
+    OrdinationFormatError,
+    PhylipFormatError,
+    QSeqFormatError,
+    QUALFormatError,
+    StockholmFormatError,
+    GFF3FormatError,
+    EMBLFormatError,
+    BIOMFormatError,
+)
 from .registry import write, read, sniff, create_format, io_registry
 from .util import open
 
-__all__ = ['write', 'read', 'sniff', 'open', 'io_registry', 'create_format',
-
-           'FormatIdentificationWarning', 'ArgumentOverrideWarning',
-           'UnrecognizedFormatError', 'IOSourceError',
-
-           'FileFormatError',
-           'BLAST7FormatError',
-           'ClustalFormatError',
-           'EMBLFormatError',
-           'FASTAFormatError',
-           'FASTQFormatError',
-           'GenBankFormatError',
-           'GFF3FormatError',
-           'LSMatFormatError',
-           'NewickFormatError',
-           'OrdinationFormatError',
-           'PhylipFormatError',
-           'QSeqFormatError',
-           'QUALFormatError',
-           'StockholmFormatError']
+__all__ = [
+    "write",
+    "read",
+    "sniff",
+    "open",
+    "io_registry",
+    "create_format",
+    "FormatIdentificationWarning",
+    "ArgumentOverrideWarning",
+    "UnrecognizedFormatError",
+    "IOSourceError",
+    "FileFormatError",
+    "BLAST7FormatError",
+    "ClustalFormatError",
+    "EMBLFormatError",
+    "FASTAFormatError",
+    "FASTQFormatError",
+    "GenBankFormatError",
+    "GFF3FormatError",
+    "LSMatFormatError",
+    "NewickFormatError",
+    "OrdinationFormatError",
+    "PhylipFormatError",
+    "QSeqFormatError",
+    "QUALFormatError",
+    "StockholmFormatError",
+    "BIOMFormatError",
+    "EmbeddingFormatError",
+]
 
 
 # Necessary to import each file format module to have them added to the I/O
 # registry. We use import_module instead of a typical import to avoid flake8
 # unused import errors.
-import_module('skbio.io.format.blast6')
-import_module('skbio.io.format.blast7')
-import_module('skbio.io.format.clustal')
-import_module('skbio.io.format.embl')
-import_module('skbio.io.format.fasta')
-import_module('skbio.io.format.fastq')
-import_module('skbio.io.format.lsmat')
-import_module('skbio.io.format.newick')
-import_module('skbio.io.format.ordination')
-import_module('skbio.io.format.phylip')
-import_module('skbio.io.format.qseq')
-import_module('skbio.io.format.genbank')
-import_module('skbio.io.format.gff3')
-import_module('skbio.io.format.stockholm')
+import_module("skbio.io.format.blast6")
+import_module("skbio.io.format.blast7")
+import_module("skbio.io.format.clustal")
+import_module("skbio.io.format.embl")
+import_module("skbio.io.format.fasta")
+import_module("skbio.io.format.fastq")
+import_module("skbio.io.format.lsmat")
+import_module("skbio.io.format.newick")
+import_module("skbio.io.format.ordination")
+import_module("skbio.io.format.phylip")
+import_module("skbio.io.format.qseq")
+import_module("skbio.io.format.genbank")
+import_module("skbio.io.format.gff3")
+import_module("skbio.io.format.stockholm")
+import_module("skbio.io.format.binary_dm")
+import_module("skbio.io.format.taxdump")
+import_module("skbio.io.format.sample_metadata")
+import_module("skbio.io.format.biom")
+import_module("skbio.io.format.embedding")
 
 # This is meant to be a handy indicator to the user that they have done
 # something wrong.
-import_module('skbio.io.format.emptyfile')
+import_module("skbio.io.format.emptyfile")
 
 # Now that all of our I/O has loaded, we can add the object oriented methods
 # (read and write) to each class which has registered I/O operations.

@@ -1,6 +1,5 @@
-"""
-Utility functionality (:mod:`skbio.util`)
-=========================================
+r"""Utilities for Developers (:mod:`skbio.util`)
+============================================
 
 .. currentmodule:: skbio.util
 
@@ -9,7 +8,7 @@ scikit-bio, as well as various utility functionality, including I/O and
 unit-testing convenience functions.
 
 Testing functionality
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Common functionality to support testing in skbio.
 
@@ -21,7 +20,7 @@ Common functionality to support testing in skbio.
    assert_data_frame_almost_equal
 
 Miscellaneous functionality
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Generally useful functionality that doesn't fit in more specific locations.
 
@@ -33,8 +32,8 @@ Generally useful functionality that doesn't fit in more specific locations.
    safe_md5
    classproperty
 
-Warnings
---------
+Developer warnings
+^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: generated/
@@ -42,24 +41,38 @@ Warnings
    EfficiencyWarning
    RepresentationWarning
 
-"""
+
+"""  # noqa: D412, D416, D205, D415
 
 # ----------------------------------------------------------------------------
 # Copyright (c) 2013--, scikit-bio development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from ._warning import EfficiencyWarning, RepresentationWarning, SkbioWarning
-from ._misc import cardinal_to_ordinal, find_duplicates, safe_md5
-from ._testing import (get_data_path,
-                       assert_ordination_results_equal,
-                       assert_data_frame_almost_equal, pytestrunner)
+from ._misc import cardinal_to_ordinal, find_duplicates, safe_md5, get_rng
+from ._testing import (
+    get_data_path,
+    assert_ordination_results_equal,
+    assert_data_frame_almost_equal,
+    pytestrunner,
+)
 from ._decorator import classproperty
 
-__all__ = ['SkbioWarning', 'EfficiencyWarning', 'RepresentationWarning',
-           'cardinal_to_ordinal', 'find_duplicates', 'safe_md5',
-           'get_data_path', 'assert_ordination_results_equal',
-           'assert_data_frame_almost_equal', 'classproperty', 'pytestrunner']
+__all__ = [
+    "SkbioWarning",
+    "EfficiencyWarning",
+    "RepresentationWarning",
+    "cardinal_to_ordinal",
+    "find_duplicates",
+    "safe_md5",
+    "get_rng",
+    "get_data_path",
+    "assert_ordination_results_equal",
+    "assert_data_frame_almost_equal",
+    "classproperty",
+    "pytestrunner",
+]

@@ -3,16 +3,14 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import numpy as np
 
 from skbio.diversity._util import _validate_counts_vector
-from skbio.util._decorator import experimental
 
 
-@experimental(as_of="0.4.0")
 def lladser_pe(counts, r=10):
     """Calculate single point estimate of conditional uncovered probability.
 
@@ -59,8 +57,7 @@ def lladser_pe(counts, r=10):
     return pe
 
 
-@experimental(as_of="0.4.0")
-def lladser_ci(counts, r, alpha=0.95, f=10, ci_type='ULCL'):
+def lladser_ci(counts, r, alpha=0.95, f=10, ci_type="ULCL"):
     """Calculate single CI of the conditional uncovered probability.
 
     Parameters
@@ -155,14 +152,14 @@ def _lladser_point_estimates(sample, r=10):
     if r <= 2:
         raise ValueError("r must be greater than or equal to 3.")
 
-    for count, seen, cost, i in _get_interval_for_r_new_otus(sample, r):
+    for count, seen, cost, i in _get_interval_for_r_new_taxa(sample, r):
         t = np.random.gamma(count, 1)
         point_est = (r - 1) / t
         yield point_est, i, t
 
 
-def _get_interval_for_r_new_otus(seq, r):
-    """Compute interval between r new OTUs for seq of samples.
+def _get_interval_for_r_new_taxa(seq, r):
+    """Compute interval between r new taxa for seq of samples.
 
     Imagine an urn with colored balls. Given a drawing of balls from the urn,
     compute how many balls need to be looked at to discover r new colors.
@@ -218,7 +215,7 @@ def _get_interval_for_r_new_otus(seq, r):
         yield count, set(seen), cost, i
 
 
-def _lladser_ci_series(seq, r, alpha=0.95, f=10, ci_type='ULCL'):
+def _lladser_ci_series(seq, r, alpha=0.95, f=10, ci_type="ULCL"):
     """Construct r-color confidence intervals for uncovered conditional prob.
 
     Parameters
@@ -243,12 +240,12 @@ def _lladser_ci_series(seq, r, alpha=0.95, f=10, ci_type='ULCL'):
         Yields one CI prediction for each new color that is detected and where.
 
     """
-    for count, seen, cost, i in _get_interval_for_r_new_otus(seq, r):
+    for count, seen, cost, i in _get_interval_for_r_new_taxa(seq, r):
         t = np.random.gamma(count, 1)
         yield _lladser_ci_from_r(r, t, alpha, f, ci_type)
 
 
-def _lladser_ci_from_r(r, t, alpha=0.95, f=10, ci_type='ULCL'):
+def _lladser_ci_from_r(r, t, alpha=0.95, f=10, ci_type="ULCL"):
     """Construct r-color confidence interval for uncovered conditional prob.
 
     Returns
@@ -266,13 +263,13 @@ def _lladser_ci_from_r(r, t, alpha=0.95, f=10, ci_type='ULCL'):
     """
     alpha = round(alpha, 2)
 
-    if ci_type == 'U':
+    if ci_type == "U":
         if alpha != 0.95:
             raise ValueError("alpha must be 0.95 if ci_type is 'U'.")
         if r not in _UPPER_CONFIDENCE_BOUND:
             raise ValueError("r must be between 1-25 or 50 if ci_type is 'U'.")
         return 0.0, _UPPER_CONFIDENCE_BOUND[r] / t
-    elif ci_type == 'L':
+    elif ci_type == "L":
         if alpha != 0.95:
             raise ValueError("alpha must be 0.95 if ci_type is 'L'.")
         if r not in _LOWER_CONFIDENCE_BOUND:
@@ -280,9 +277,9 @@ def _lladser_ci_from_r(r, t, alpha=0.95, f=10, ci_type='ULCL'):
         return _LOWER_CONFIDENCE_BOUND[r] / t, 1.0
 
     bound_params = _ul_confidence_bounds(f, r, alpha)
-    if ci_type == 'ULCL':
+    if ci_type == "ULCL":
         bound_param = bound_params[0]
-    elif ci_type == 'ULCU':
+    elif ci_type == "ULCU":
         bound_param = bound_params[1]
     else:
         raise ValueError("Unknown ci_type '%s'." % ci_type)
@@ -332,8 +329,10 @@ def _ul_confidence_bounds(f, r, alpha):
             a, b = _CBS[alpha][r]
 
     if a is None or b is None:
-        raise ValueError("No constants are precomputed for the combination of "
-                         "f=%f, r=%d, and alpha=%.2f" % (f, r, alpha))
+        raise ValueError(
+            "No constants are precomputed for the combination of "
+            "f=%f, r=%d, and alpha=%.2f" % (f, r, alpha)
+        )
     return a, b
 
 
@@ -366,7 +365,7 @@ _UPPER_CONFIDENCE_BOUND = {
     23: 31.41481021,
     24: 32.58538445,
     25: 33.75240327,
-    50: 62.17105670
+    50: 62.17105670,
 }
 
 
@@ -398,7 +397,7 @@ _LOWER_CONFIDENCE_BOUND = {
     22: 14.89373854,
     23: 15.71949763,
     24: 16.54903871,
-    25: 17.38212584
+    25: 17.38212584,
 }
 
 
@@ -413,7 +412,6 @@ _PRECOMPUTED_TABLE = {
     (1.5, 100, 0.95): (79.0424349, 83.22790086),
     (1.5, 94, 0.95): (75.9077267, 76.5492088),
     (2.5, 19, 0.95): (11.26109001, 11.96814857),
-
     # In the next block for each f, we report the smallest possible value
     # of r from table 4 in the paper
     (80, 2, 0.95): (0.0598276655, 0.355361510),
@@ -426,9 +424,7 @@ _PRECOMPUTED_TABLE = {
     (6, 6, 0.95): (1.8207383, 2.58658608),
     (5, 7, 0.95): (2.48303930, 3.22806682),
     (3, 14, 0.95): (7.17185045, 8.27008349),
-    (2.5, 19, 0.95): (11.26109001, 11.96814857),
-    (1.5, 94, 0.95): (75.9077267, 76.5492088),
-    (1.25, 309, 0.95): (275.661191, 275.949782)
+    (1.25, 309, 0.95): (275.661191, 275.949782),
 }
 
 
@@ -441,10 +437,10 @@ _CB_90 = [
     (None, None),  # 0, makes indexing easier
     (None, None),  # no feasible solution
     (None, None),  # no feasible solution
-    (.5635941995, 1.095834700),
-    (.6764656264, 1.744588615),
-    (.8018565594, 2.432587343),
-    (.9282215025, 3.151897973),
+    (0.5635941995, 1.095834700),
+    (0.6764656264, 1.744588615),
+    (0.8018565594, 2.432587343),
+    (0.9282215025, 3.151897973),
     (1.053433716, 3.894766804),
     (1.177158858, 4.656118177),
     (1.299491033, 5.432468058),
@@ -488,7 +484,7 @@ _CB_90 = [
     (None, None),
     (None, None),
     (None, None),
-    (5.924900191, 41.17906791)  # 50
+    (5.924900191, 41.17906791),  # 50
 ]
 
 _CB_95 = [
@@ -496,8 +492,8 @@ _CB_95 = [
     (None, None),
     (None, None),
     (None, None),
-    (.8060262438, 1.360288674),  # 4
-    (.9240311584, 1.969902537),
+    (0.8060262438, 1.360288674),  # 4
+    (0.9240311584, 1.969902537),
     (1.053998892, 2.613007253),
     (1.185086998, 3.285315518),
     (1.315076337, 3.980822783),
@@ -542,7 +538,7 @@ _CB_95 = [
     (None, None),
     (None, None),
     (None, None),
-    (6.217105673, 38.96473258)  # 50
+    (6.217105673, 38.96473258),  # 50
 ]
 
 _CB_99 = [
@@ -596,11 +592,7 @@ _CB_99 = [
     (None, None),
     (None, None),
     (None, None),
-    (6.79033616, 35.0324474)  # 50
+    (6.79033616, 35.0324474),  # 50
 ]
 
-_CBS = {
-    0.90: _CB_90,
-    0.95: _CB_95,
-    0.99: _CB_99
-}
+_CBS = {0.90: _CB_90, 0.95: _CB_95, 0.99: _CB_99}

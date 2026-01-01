@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import io
@@ -13,7 +13,7 @@ from unittest import TestCase, main
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
-import pandas.util.testing as pdt
+import pandas.testing as pdt
 
 from skbio.util import get_data_path, assert_data_frame_almost_equal
 from skbio.stats.gradient import (GradientANOVA, AverageGradientANOVA,
@@ -237,7 +237,7 @@ class GradientTests(BaseTests):
                                       's6': np.array([2.1795918367]),
                                       's7': np.array([17.8]),
                                       's8': np.array([20.3428571428])},
-                                     orient='index')
+                                     orient='index').astype(np.float64)
         obs = _weight_by_vector(trajectory, w_vector)
         assert_data_frame_almost_equal(obs.sort_index(), exp.sort_index())
 
@@ -254,16 +254,16 @@ class GradientTests(BaseTests):
         w_vector = pd.Series(np.array([1, 2, 3, 4, 5, 6, 7, 8]),
                              ['s1', 's2', 's3', 's4',
                               's5', 's6', 's7', 's8']).astype(np.float64)
-        exp = pd.DataFrame.from_dict({'s1': np.array([1.0]),
-                                      's2': np.array([2.0]),
-                                      's3': np.array([3.0]),
-                                      's4': np.array([4.0]),
-                                      's5': np.array([5.0]),
-                                      's6': np.array([6.0]),
-                                      's7': np.array([7.0]),
-                                      's8': np.array([8.0])
+        exp = pd.DataFrame.from_dict({'s1': np.array([1]),
+                                      's2': np.array([2]),
+                                      's3': np.array([3]),
+                                      's4': np.array([4]),
+                                      's5': np.array([5]),
+                                      's6': np.array([6]),
+                                      's7': np.array([7]),
+                                      's8': np.array([8])
                                       },
-                                     orient='index')
+                                     orient='index').astype(np.float64)
         obs = _weight_by_vector(trajectory, w_vector)
         assert_data_frame_almost_equal(obs.sort_index(), exp.sort_index())
 
@@ -276,11 +276,12 @@ class GradientTests(BaseTests):
         trajectory.sort_values(by=0, inplace=True)
         w_vector = pd.Series(np.array([25, 30, 35, 40, 45]),
                              ['s2', 's3', 's4', 's5', 's6']).astype(np.float64)
-        exp = pd.DataFrame.from_dict({'s2': np.array([2.0]),
-                                      's3': np.array([3.0]),
-                                      's4': np.array([4.0]),
-                                      's5': np.array([5.0]),
-                                      's6': np.array([6.0])}, orient='index')
+        exp = pd.DataFrame.from_dict({'s2': np.array([2]),
+                                      's3': np.array([3]),
+                                      's4': np.array([4]),
+                                      's5': np.array([5]),
+                                      's6': np.array([6])},
+                                     orient='index').astype(np.float64)
         obs = _weight_by_vector(trajectory, w_vector)
         assert_data_frame_almost_equal(obs.sort_index(), exp.sort_index())
 
@@ -479,11 +480,13 @@ class GradientANOVATests(BaseTests):
         # Test with weighted = False
         bv = GradientANOVA(self.coords, self.prop_expl, self.metadata_map)
 
-        assert_data_frame_almost_equal(bv._coords, self.coords_3axes)
+        assert_data_frame_almost_equal(bv._coords.loc[self.coords_3axes.index],
+                                       self.coords_3axes)
         exp_prop_expl = np.array([25.6216900347, 15.7715955926,
                                   14.1215046787])
         npt.assert_equal(bv._prop_expl, exp_prop_expl)
-        assert_data_frame_almost_equal(bv._metadata_map, self.metadata_map)
+        assert_data_frame_almost_equal(bv._metadata_map.loc[self.metadata_map.index],  # noqa
+                                       self.metadata_map)
         self.assertTrue(bv._weighting_vector is None)
         self.assertFalse(bv._weighted)
 
@@ -491,15 +494,18 @@ class GradientANOVATests(BaseTests):
         bv = GradientANOVA(self.coords, self.prop_expl, self.metadata_map,
                            sort_category='Weight', weighted=True)
 
-        assert_data_frame_almost_equal(bv._coords, self.coords_3axes)
+        assert_data_frame_almost_equal(bv._coords.loc[self.coords_3axes.index],
+                                       self.coords_3axes)
         npt.assert_equal(bv._prop_expl, exp_prop_expl)
-        assert_data_frame_almost_equal(bv._metadata_map, self.metadata_map)
+        assert_data_frame_almost_equal(bv._metadata_map.loc[self.metadata_map.index],  # noqa
+                                       self.metadata_map)
         exp_weighting_vector = pd.Series(
             np.array([60, 55, 50, 52, 57, 65, 68, 70, 72]),
             ['PC.354', 'PC.355', 'PC.356', 'PC.481', 'PC.593', 'PC.607',
              'PC.634', 'PC.635', 'PC.636'], name='Weight'
             ).astype(np.float64)
-        pdt.assert_series_equal(bv._weighting_vector, exp_weighting_vector)
+        pdt.assert_series_equal(bv._weighting_vector.loc[exp_weighting_vector.index],  # noqa
+                                exp_weighting_vector)
         self.assertTrue(bv._weighted)
 
     def test_init_error(self):

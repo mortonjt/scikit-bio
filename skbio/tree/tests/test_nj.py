@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import io
@@ -80,8 +80,9 @@ class NjTests(TestCase):
                          self.expected1_str)
         # what is the correct way to compare TreeNode objects for equality?
         actual_TreeNode = nj(self.dm1)
-        self.assertEqual(actual_TreeNode.compare_tip_distances(
-            self.expected1_TreeNode), 0.0)
+        # precision error on ARM: 1.6653345369377348e-16 != 0.0
+        self.assertAlmostEqual(actual_TreeNode.compare_tip_distances(
+            self.expected1_TreeNode), 0.0, places=10)
 
     def test_nj_dm2(self):
         actual_TreeNode = nj(self.dm2)

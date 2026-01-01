@@ -3,24 +3,34 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 from itertools import combinations
 
+import warnings
 import numpy as np
 import pandas as pd
 import scipy.special
-from scipy.stats import pearsonr, spearmanr
+from scipy.stats import kendalltau
+from scipy.stats import ConstantInputWarning
+from scipy.stats import NearConstantInputWarning
 
 from skbio.stats.distance import DistanceMatrix
-from skbio.util._decorator import experimental
+
+from ._cutils import mantel_perm_pearsonr_cy
 
 
-@experimental(as_of="0.4.0")
-def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
-           strict=True, lookup=None):
-    """Compute correlation between distance matrices using the Mantel test.
+def mantel(
+    x,
+    y,
+    method="pearson",
+    permutations=999,
+    alternative="two-sided",
+    strict=True,
+    lookup=None,
+):
+    r"""Compute correlation between distance matrices using the Mantel test.
 
     The Mantel test compares two distance matrices by computing the correlation
     between the distances in the lower (or upper) triangular portions of the
@@ -34,14 +44,14 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
 
     .. math::
 
-       r_M=\\frac{1}{d-1}\\sum_{i=1}^{n-1}\\sum_{j=i+1}^{n}
+       r_M=\frac{1}{d-1}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n}
        stand(D_X)_{ij}stand(D_Y)_{ij}
 
     where
 
     .. math::
 
-       d=\\frac{n(n-1)}{2}
+       d=\frac{n(n-1)}{2}
 
     and :math:`n` is the number of rows/columns in each of the distance
     matrices. :math:`stand(D_X)` and :math:`stand(D_Y)` are distance matrices
@@ -73,7 +83,7 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
         `y` are ``array_like``, no reordering is applied and both matrices must
         have the same shape. In either case, `x` and `y` must be at least 3x3
         in size *after* reordering and matching of IDs.
-    method : {'pearson', 'spearman'}
+    method : {'pearson', 'spearman','kendalltau'}
         Method used to compute the correlation between distance matrices.
     permutations : int, optional
         Number of times to randomly permute `x` when assessing statistical
@@ -250,54 +260,251 @@ def mantel(x, y, method='pearson', permutations=999, alternative='two-sided',
     ``array_like`` because there is no notion of IDs.
 
     """
-    if method == 'pearson':
-        corr_func = pearsonr
-    elif method == 'spearman':
-        corr_func = spearmanr
+    special = False  # set to true, if we have a dedicated implementation
+    if method == "pearson":
+        special = True
+    elif method == "spearman":
+        special = True
+    elif method == "kendalltau":
+        corr_func = kendalltau
     else:
         raise ValueError("Invalid correlation method '%s'." % method)
 
     if permutations < 0:
-        raise ValueError("Number of permutations must be greater than or "
-                         "equal to zero.")
-    if alternative not in ('two-sided', 'greater', 'less'):
+        raise ValueError(
+            "Number of permutations must be greater than or " "equal to zero."
+        )
+    if alternative not in ("two-sided", "greater", "less"):
         raise ValueError("Invalid alternative hypothesis '%s'." % alternative)
 
     x, y = _order_dms(x, y, strict=strict, lookup=lookup)
 
     n = x.shape[0]
     if n < 3:
-        raise ValueError("Distance matrices must have at least 3 matching IDs "
-                         "between them (i.e., minimum 3x3 in size).")
+        raise ValueError(
+            "Distance matrices must have at least 3 matching IDs "
+            "between them (i.e., minimum 3x3 in size)."
+        )
 
-    x_flat = x.condensed_form()
-    y_flat = y.condensed_form()
+    if special:
+        if method == "pearson":
+            orig_stat, comp_stat, permuted_stats = _mantel_stats_pearson(
+                x, y, permutations
+            )
+        elif method == "spearman":
+            orig_stat, comp_stat, permuted_stats = _mantel_stats_spearman(
+                x, y, permutations
+            )
+        else:
+            raise ValueError("Invalid correlation method '%s'." % method)
+    else:
+        x_flat = x.condensed_form()
+        y_flat = y.condensed_form()
 
-    orig_stat = corr_func(x_flat, y_flat)[0]
+        orig_stat = comp_stat = corr_func(x_flat, y_flat)[0]
+        del x_flat
+
+        permuted_stats = []
+        if not (permutations == 0 or np.isnan(orig_stat)):
+            perm_gen = (
+                corr_func(x.permute(condensed=True), y_flat)[0]
+                for _ in range(permutations)
+            )
+            permuted_stats = np.fromiter(perm_gen, float, count=permutations)
+
+        del y_flat
 
     if permutations == 0 or np.isnan(orig_stat):
         p_value = np.nan
     else:
-        perm_gen = (corr_func(x.permute(condensed=True), y_flat)[0]
-                    for _ in range(permutations))
-        permuted_stats = np.fromiter(perm_gen, np.float, count=permutations)
-
-        if alternative == 'two-sided':
-            count_better = (np.absolute(permuted_stats) >=
-                            np.absolute(orig_stat)).sum()
-        elif alternative == 'greater':
-            count_better = (permuted_stats >= orig_stat).sum()
+        if alternative == "two-sided":
+            count_better = (np.absolute(permuted_stats) >= np.absolute(comp_stat)).sum()
+        elif alternative == "greater":
+            count_better = (permuted_stats >= comp_stat).sum()
         else:
-            count_better = (permuted_stats <= orig_stat).sum()
+            count_better = (permuted_stats <= comp_stat).sum()
 
         p_value = (count_better + 1) / (permutations + 1)
 
     return orig_stat, p_value, n
 
 
-@experimental(as_of="0.4.0")
-def pwmantel(dms, labels=None, method='pearson', permutations=999,
-             alternative='two-sided', strict=True, lookup=None):
+def _mantel_stats_pearson_flat(x, y_flat, permutations):
+    """Compute original and permuted stats using pearsonr.
+
+    Parameters
+    ----------
+    x : DistanceMatrix
+        Input distance matrix.
+    y_flat: 1D array
+        Compact representation of a distance matrix.
+    permutations : int
+        Number of times to randomly permute `x` when assessing statistical
+        significance. Must be greater than or equal to zero. If zero,
+        statistical significance calculations will be skipped and
+        permuted_stats will be an empty array.
+
+    Returns
+    -------
+    orig_stat : 1D array_like
+        Correlation coefficient of the test.
+    comp_stat : 1D array_like
+        Correlation coefficient to compare against permuted_stats, usually
+        the same as orig_stat, but on certain architectures it will differ.
+        This should be used for any p-value calculation as it will match the
+        values for any "self-permutations" in the permuted_stats.
+    permuted_stats : 1D array_like
+        Permuted correlation coefficients of the test.
+
+    """
+    x_flat = x.condensed_form()
+
+    # If an input is constant, the correlation coefficient is not defined.
+    if (x_flat == x_flat[0]).all() or (y_flat == y_flat[0]).all():
+        warnings.warn(ConstantInputWarning())
+        return np.nan, np.nan, []
+
+    # inline pearsonr, condensed from scipy.stats.pearsonr
+    xmean = x_flat.mean()
+    xm = x_flat - xmean
+    normxm = np.linalg.norm(xm)
+    xm_normalized = xm / normxm
+    del xm
+    del x_flat
+
+    ymean = y_flat.mean()
+    ym = y_flat - ymean
+    normym = np.linalg.norm(ym)
+    ym_normalized = ym / normym
+    del ym
+
+    threshold = 1e-13
+    if (normxm < threshold * abs(xmean)) or (normym < threshold * abs(ymean)):
+        # If all the values in x (likewise y) are very close to the mean,
+        # the loss of precision that occurs in the subtraction xm = x - xmean
+        # might result in large errors in r.
+        warnings.warn(NearConstantInputWarning())
+
+    orig_stat = np.dot(xm_normalized, ym_normalized)
+
+    # Presumably, if abs(orig_stat) > 1, then it is only some small artifact of
+    # floating point arithmetic.
+    orig_stat = max(min(orig_stat, 1.0), -1.0)
+
+    mat_n = x._data.shape[0]
+    # note: xmean and normxm do not change with permutations
+    permuted_stats = []
+    comp_stat = orig_stat
+    if not (permutations == 0 or np.isnan(orig_stat)):
+        # inline DistanceMatrix.permute, grouping them together
+        x_data = x._data
+        if not x_data.flags.c_contiguous:
+            x_data = np.asarray(x_data, order="C")
+
+        # compute all pearsonr permutations at once
+        # create first the list of permutations
+        perm_order = np.empty((permutations + 1, mat_n), dtype=int)
+        # first row/statistic will be comp_stat
+        perm_order[0, :] = np.arange(mat_n)
+        for row in range(1, permutations + 1):
+            perm_order[row, :] = np.random.permutation(mat_n)
+
+        permuted_stats = np.empty(permutations + 1, dtype=x_data.dtype)
+        mantel_perm_pearsonr_cy(
+            x_data, perm_order, xmean, normxm, ym_normalized, permuted_stats
+        )
+        comp_stat = permuted_stats[0]
+        permuted_stats = permuted_stats[1:]
+
+    return orig_stat, comp_stat, permuted_stats
+
+
+def _mantel_stats_pearson(x, y, permutations):
+    """Compute original and permuted stats using pearsonr.
+
+    Parameters
+    ----------
+    x, y : DistanceMatrix
+        Input distance matrices to compare.
+    permutations : int
+        Number of times to randomly permute `x` when assessing statistical
+        significance. Must be greater than or equal to zero. If zero,
+        statistical significance calculations will be skipped and
+        permuted_stats will be an empty array.
+
+    Returns
+    -------
+    orig_stat : 1D array_like
+        Correlation coefficient of the test.
+    comp_stat : 1D array_like
+        Correlation coefficient to compare against permuted_stats, usually
+        the same as orig_stat, but on certain architectures it will differ.
+        This should be used for any p-value calculation as it will match the
+        values for any "self-permutations" in the permuted_stats.
+    permuted_stats : 1D array_like
+        Permuted correlation coefficients of the test.
+
+    """
+    y_flat = y.condensed_form()
+    return _mantel_stats_pearson_flat(x, y_flat, permutations)
+
+
+def _mantel_stats_spearman(x, y, permutations):
+    """Compute original and permuted stats using spearmanr.
+
+    Parameters
+    ----------
+    x, y : DistanceMatrix
+        Input distance matrices to compare.
+    permutations : int
+        Number of times to randomly permute `x` when assessing statistical
+        significance. Must be greater than or equal to zero. If zero,
+        statistical significance calculations will be skipped and
+        permuted_stats will be an empty array.
+
+    Returns
+    -------
+    orig_stat : 1D array_like
+        Correlation coefficient of the test.
+    comp_stat : 1D array_like
+        Correlation coefficient to compare against permuted_stats, usually
+        the same as orig_stat, but on certain architectures it will differ.
+        This should be used for any p-value calculation as it will match the
+        values for any "self-permutations" in the permuted_stats.
+    permuted_stats : 1D array_like
+        Permuted correlation coefficients of the test.
+
+    """
+    x_flat = x.condensed_form()
+    y_flat = y.condensed_form()
+
+    # If an input is constant, the correlation coefficient is not defined.
+    if (x_flat == x_flat[0]).all() or (y_flat == y_flat[0]).all():
+        warnings.warn(ConstantInputWarning())
+        return np.nan, np.nan, []
+
+    y_rank = scipy.stats.rankdata(y_flat)
+    del y_flat
+
+    x_rank = scipy.stats.rankdata(x_flat)
+    del x_flat
+
+    x_rank_matrix = DistanceMatrix(x_rank, x.ids)
+    del x_rank
+
+    # for our purposes, spearman is just pearson on rankdata
+    return _mantel_stats_pearson_flat(x_rank_matrix, y_rank, permutations)
+
+
+def pwmantel(
+    dms,
+    labels=None,
+    method="pearson",
+    permutations=999,
+    alternative="two-sided",
+    strict=True,
+    lookup=None,
+):
     """Run Mantel tests for every pair of given distance matrices.
 
     Runs a Mantel test for each pair of distance matrices and collates the
@@ -345,7 +552,7 @@ def pwmantel(dms, labels=None, method='pearson', permutations=999,
     DistanceMatrix.read
 
     Notes
-    --------
+    -----
     Passing a list of filepaths can be useful as it allows for a smaller amount
     of memory consumption as it only loads two matrices at a time as opposed to
     loading all distance matrices into memory.
@@ -393,15 +600,23 @@ def pwmantel(dms, labels=None, method='pearson', permutations=999,
         labels = range(num_dms)
     else:
         if num_dms != len(labels):
-            raise ValueError("Number of labels must match the number of "
-                             "distance matrices.")
+            raise ValueError(
+                "Number of labels must match the number of " "distance matrices."
+            )
         if len(set(labels)) != len(labels):
             raise ValueError("Labels must be unique.")
 
     num_combs = scipy.special.comb(num_dms, 2, exact=True)
-    results_dtype = [('dm1', object), ('dm2', object), ('statistic', float),
-                     ('p-value', float), ('n', int), ('method', object),
-                     ('permutations', int), ('alternative', object)]
+    results_dtype = [
+        ("dm1", object),
+        ("dm2", object),
+        ("statistic", float),
+        ("p-value", float),
+        ("n", int),
+        ("method", object),
+        ("permutations", int),
+        ("alternative", object),
+    ]
     results = np.empty(num_combs, dtype=results_dtype)
 
     for i, pair in enumerate(combinations(zip(labels, dms), 2)):
@@ -411,14 +626,19 @@ def pwmantel(dms, labels=None, method='pearson', permutations=999,
         if isinstance(y, str):
             y = DistanceMatrix.read(y)
 
-        stat, p_val, n = mantel(x, y, method=method, permutations=permutations,
-                                alternative=alternative, strict=strict,
-                                lookup=lookup)
+        stat, p_val, n = mantel(
+            x,
+            y,
+            method=method,
+            permutations=permutations,
+            alternative=alternative,
+            strict=strict,
+            lookup=lookup,
+        )
 
-        results[i] = (xlabel, ylabel, stat, p_val, n, method, permutations,
-                      alternative)
+        results[i] = (xlabel, ylabel, stat, p_val, n, method, permutations, alternative)
 
-    return pd.DataFrame.from_records(results, index=('dm1', 'dm2'))
+    return pd.DataFrame.from_records(results, index=("dm1", "dm2"))
 
 
 def _order_dms(x, y, strict=True, lookup=None):
@@ -430,30 +650,33 @@ def _order_dms(x, y, strict=True, lookup=None):
         raise TypeError(
             "Mixing DistanceMatrix and array_like input types is not "
             "supported. Both x and y must either be DistanceMatrix instances "
-            "or array_like, but not mixed.")
+            "or array_like, but not mixed."
+        )
     elif x_is_dm and y_is_dm:
         if lookup is not None:
-            x = _remap_ids(x, lookup, 'x', 'first')
-            y = _remap_ids(y, lookup, 'y', 'second')
+            x = _remap_ids(x, lookup, "x", "first")
+            y = _remap_ids(y, lookup, "y", "second")
+
+        if tuple(x.ids) == tuple(y.ids):
+            return x, y
 
         id_order = [id_ for id_ in x.ids if id_ in y]
         num_matches = len(id_order)
 
-        if (strict and ((num_matches != len(x.ids)) or
-                        (num_matches != len(y.ids)))):
-            raise ValueError("IDs exist that are not in both distance "
-                             "matrices.")
+        if strict and ((num_matches != len(x.ids)) or (num_matches != len(y.ids))):
+            raise ValueError("IDs exist that are not in both distance " "matrices.")
 
         if num_matches < 1:
-            raise ValueError("No matching IDs exist between the distance "
-                             "matrices.")
+            raise ValueError("No matching IDs exist between the distance " "matrices.")
 
         return x.filter(id_order), y.filter(id_order)
     else:
         # Both x and y aren't DistanceMatrix instances.
         if lookup is not None:
-            raise ValueError("ID lookup can only be provided if inputs are "
-                             "DistanceMatrix instances.")
+            raise ValueError(
+                "ID lookup can only be provided if inputs are "
+                "DistanceMatrix instances."
+            )
 
         x = DistanceMatrix(x)
         y = DistanceMatrix(y)
@@ -465,12 +688,14 @@ def _order_dms(x, y, strict=True, lookup=None):
 
 
 def _remap_ids(dm, lookup, label, order):
-    "Return a copy of `dm` with its IDs remapped based on `lookup`."""
+    """Return a copy of `dm` with its IDs remapped based on `lookup`."""
     try:
         remapped_ids = [lookup[id_] for id_ in dm.ids]
     except KeyError as e:
-        raise KeyError("All IDs in the %s distance matrix (%s) must be in "
-                       "the lookup. Missing ID: %s" % (order, label, str(e)))
+        raise KeyError(
+            "All IDs in the %s distance matrix (%s) must be in "
+            "the lookup. Missing ID: %s" % (order, label, str(e))
+        )
 
     # Create a copy as we'll be modifying the IDs in place.
     dm_copy = dm.copy()

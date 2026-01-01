@@ -3,12 +3,15 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
+
+from warnings import warn, simplefilter
 
 
 class SkbioWarning(Warning):
-    """Used to filter our warnings from warnings given by 3rd parties"""
+    """Filter our warnings from warnings given by 3rd parties."""
+
     pass
 
 
@@ -22,6 +25,7 @@ class EfficiencyWarning(SkbioWarning):
     potentially orders of magnitude slower.
 
     """
+
     pass
 
 
@@ -34,9 +38,24 @@ class RepresentationWarning(SkbioWarning):
     deleterious value could be used, accompanied by this warning.
 
     """
+
     pass
 
 
 class DeprecationWarning(DeprecationWarning, SkbioWarning):
     """Used to indicate deprecated functionality in scikit-bio."""
+
     pass
+
+
+def _warn_deprecated(func, ver, msg=None):
+    """Warn of deprecated status."""
+    if not hasattr(func, "warned"):
+        simplefilter("once", DeprecationWarning)
+        if msg:
+            warn(
+                f"{func.__name__} is deprecated as of {ver}. {msg}", DeprecationWarning
+            )
+        else:
+            warn(f"{func.__name__} is deprecated as of {ver}.")
+        func.warned = True

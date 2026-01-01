@@ -3,21 +3,17 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import skbio
 from skbio.util._decorator import classproperty, overrides
-from skbio.util._decorator import stable
 from ._nucleotide_mixin import NucleotideMixin, _motifs as _parent_motifs
-from ._grammared_sequence import GrammaredSequence, DisableSubclassingMeta
+from ._grammared_sequence import GrammaredSequence
 
 
-class RNA(GrammaredSequence, NucleotideMixin,
-          metaclass=DisableSubclassingMeta):
+class RNA(GrammaredSequence, NucleotideMixin):
     r"""Store RNA sequence data and optional associated metadata.
-
-    Only characters in the IUPAC RNA character set [1]_ are supported.
 
     Parameters
     ----------
@@ -57,10 +53,34 @@ class RNA(GrammaredSequence, NucleotideMixin,
 
     Notes
     -----
-    Subclassing is disabled for RNA, because subclassing makes
-    it possible to change the alphabet, and certain methods rely on the
-    IUPAC alphabet. If a custom sequence alphabet is needed, inherit directly
-    from ``GrammaredSequence``.
+    According to the IUPAC RNA character set [1]_ , an RNA sequence may contain
+    the following four definite characters (canonical nucleotides):
+
+    +-----+-----------+
+    |Code |Nucleobase |
+    +=====+===========+
+    |``A``|Adenine    |
+    +-----+-----------+
+    |``C``|Cytosine   |
+    +-----+-----------+
+    |``G``|Guanine    |
+    +-----+-----------+
+    |``U``|Uracil     |
+    +-----+-----------+
+
+    Plus 11 degenerate characters: ``R``, ``Y``, ``S``, ``W``, ``K``, ``M``, ``B``,
+    ``D``, ``H``, ``V`` and ``N``, and two gap characters: ``-`` and ``.``. The
+    definitions of degenerate characters are provided in ``DNA``, in which ``T`` should
+    be replaced with ``U`` for RNA sequences.
+
+    Characters other than the above 17 are not allowed. To include additional
+    characters, you may create a custom alphabet using ``GrammaredSequence``.
+    Directly modifying the alphabet of ``RNA`` may break methods that rely on
+    the IUPAC alphabet.
+
+    It should be noted that some functions do not support degenerate characters
+    characters. In such cases, they will be replaced with `N` to represent any
+    of the canonical nucleotides.
 
     References
     ----------
@@ -104,9 +124,21 @@ class RNA(GrammaredSequence, NucleotideMixin,
     @overrides(NucleotideMixin)
     def complement_map(cls):
         comp_map = {
-            'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G', 'Y': 'R', 'R': 'Y',
-            'S': 'S', 'W': 'W', 'K': 'M', 'M': 'K', 'B': 'V', 'D': 'H',
-            'H': 'D', 'V': 'B', 'N': 'N'
+            "A": "U",
+            "U": "A",
+            "G": "C",
+            "C": "G",
+            "Y": "R",
+            "R": "Y",
+            "S": "S",
+            "W": "W",
+            "K": "M",
+            "M": "K",
+            "B": "V",
+            "D": "H",
+            "H": "D",
+            "V": "B",
+            "N": "N",
         }
 
         comp_map.update({c: c for c in cls.gap_chars})
@@ -121,26 +153,38 @@ class RNA(GrammaredSequence, NucleotideMixin,
     @overrides(GrammaredSequence)
     def degenerate_map(cls):
         return {
-            "R": set("AG"), "Y": set("CU"), "M": set("AC"), "K": set("UG"),
-            "W": set("AU"), "S": set("GC"), "B": set("CGU"), "D": set("AGU"),
-            "H": set("ACU"), "V": set("ACG"), "N": set("ACGU")
+            "R": set("AG"),
+            "Y": set("CU"),
+            "M": set("AC"),
+            "K": set("UG"),
+            "W": set("AU"),
+            "S": set("GC"),
+            "B": set("CGU"),
+            "D": set("AGU"),
+            "H": set("ACU"),
+            "V": set("ACG"),
+            "N": set("ACGU"),
         }
 
     @classproperty
     @overrides(GrammaredSequence)
     def default_gap_char(cls):
-        return '-'
+        return "-"
 
     @classproperty
     @overrides(GrammaredSequence)
     def gap_chars(cls):
-        return set('-.')
+        return set("-.")
+
+    @classproperty
+    @overrides(GrammaredSequence)
+    def wildcard_char(cls):
+        return "N"
 
     @property
     def _motifs(self):
         return _motifs
 
-    @stable(as_of="0.4.1")
     def reverse_transcribe(self):
         """Reverse transcribe RNA into DNA.
 
@@ -191,8 +235,9 @@ class RNA(GrammaredSequence, NucleotideMixin,
             GC-content: 25.00%
         --------------------------
         0 TAACGTTA
+
         """
-        seq = self._string.replace(b'U', b'T')
+        seq = self._string.replace(b"U", b"T")
 
         metadata = None
         if self.has_metadata():
@@ -207,12 +252,14 @@ class RNA(GrammaredSequence, NucleotideMixin,
             interval_metadata = self.interval_metadata
 
         # turn off validation because `seq` is guaranteed to be valid
-        return skbio.DNA(seq, metadata=metadata,
-                         positional_metadata=positional_metadata,
-                         interval_metadata=interval_metadata,
-                         validate=False)
+        return skbio.DNA(
+            seq,
+            metadata=metadata,
+            positional_metadata=positional_metadata,
+            interval_metadata=interval_metadata,
+            validate=False,
+        )
 
-    @stable(as_of="0.4.0")
     def translate(self, genetic_code=1, *args, **kwargs):
         """Translate RNA sequence into protein sequence.
 
@@ -282,7 +329,6 @@ class RNA(GrammaredSequence, NucleotideMixin,
             genetic_code = skbio.GeneticCode.from_ncbi(genetic_code)
         return genetic_code.translate(self, *args, **kwargs)
 
-    @stable(as_of="0.4.0")
     def translate_six_frames(self, genetic_code=1, *args, **kwargs):
         """Translate RNA into protein using six possible reading frames.
 
@@ -417,7 +463,7 @@ class RNA(GrammaredSequence, NucleotideMixin,
     def _repr_stats(self):
         """Define custom statistics to display in the sequence's repr."""
         stats = super(RNA, self)._repr_stats()
-        stats.append(('GC-content', '{:.2%}'.format(self.gc_content())))
+        stats.append(("GC-content", "{:.2%}".format(self.gc_content())))
         return stats
 
 

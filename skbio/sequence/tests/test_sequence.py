@@ -3,7 +3,7 @@
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import copy
@@ -11,7 +11,7 @@ import functools
 import itertools
 import re
 from types import GeneratorType
-from collections import Hashable
+from collections.abc import Hashable
 from unittest import TestCase, main
 
 import numpy as np
@@ -20,7 +20,7 @@ import pandas as pd
 import scipy.spatial.distance
 
 import skbio.sequence.distance
-from skbio import Sequence, DNA
+from skbio import Sequence, DNA, SubstitutionMatrix
 from skbio.util import assert_data_frame_almost_equal
 from skbio.sequence._sequence import (_single_index_to_slice, _is_single_index,
                                       _as_slice_if_single_index)
@@ -169,8 +169,8 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
     def test_concat_strict_many(self):
         odd_key = frozenset()
         expected = Sequence("13579",
-                            positional_metadata={'a': list('skbio'),
-                                                 odd_key: [1, 2, 3, 4, 5]})
+                            positional_metadata={odd_key: [1, 2, 3, 4, 5],
+                                                 'a': list('skbio')})
         result = Sequence.concat([
                 Sequence("1", positional_metadata={'a': ['s'], odd_key: [1]}),
                 Sequence("3", positional_metadata={'a': ['k'], odd_key: [2]}),
@@ -458,26 +458,26 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
             Sequence(np.array([1, "23", 3]))
         with self.assertRaises(TypeError):
             # object
-            Sequence(np.array([1, {}, ()]))
+            Sequence(np.array([1, {}, ()], dtype=object))
 
         # invalid input type (non-numpy.ndarray input)
-        with self.assertRaisesRegex(AttributeError, r'tuple'):
+        with self.assertRaisesRegex(TypeError, r'tuple'):
             Sequence(('a', 'b', 'c'))
-        with self.assertRaisesRegex(AttributeError, r'list'):
+        with self.assertRaisesRegex(TypeError, r'list'):
             Sequence(['a', 'b', 'c'])
-        with self.assertRaisesRegex(AttributeError, r'set'):
+        with self.assertRaisesRegex(TypeError, r'set'):
             Sequence({'a', 'b', 'c'})
-        with self.assertRaisesRegex(AttributeError, r'dict'):
+        with self.assertRaisesRegex(TypeError, r'dict'):
             Sequence({'a': 42, 'b': 43, 'c': 44})
-        with self.assertRaisesRegex(AttributeError, r'int'):
+        with self.assertRaisesRegex(TypeError, r'int'):
             Sequence(42)
-        with self.assertRaisesRegex(AttributeError, r'float'):
+        with self.assertRaisesRegex(TypeError, r'float'):
             Sequence(4.2)
         with self.assertRaisesRegex(TypeError, r'int64'):
-            Sequence(np.int_(50))
+            Sequence(np.int64(50))
         with self.assertRaisesRegex(TypeError, r'float64'):
             Sequence(np.float_(50))
-        with self.assertRaisesRegex(AttributeError, r'Foo'):
+        with self.assertRaisesRegex(TypeError, r'Foo'):
             class Foo:
                 pass
             Sequence(Foo())
@@ -612,12 +612,11 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         im = IntervalMetadata(4)
         im.add([(0, 2)], metadata={'gene': 'sagB'})
         seq1 = Sequence('ACGT', metadata={'id': 'foo', 'desc': 'abc'},
-                        positional_metadata={'quality': (1, 2, 3, 4)},
+                        positional_metadata={'quality': np.array((1, 2, 3, 4), dtype=np.int64)},
                         interval_metadata=im)
         seq2 = Sequence(np.array([65, 67, 71, 84], dtype=np.uint8),
                         metadata={'id': 'foo', 'desc': 'abc'},
-                        positional_metadata={'quality': np.array([1, 2, 3,
-                                                                  4])},
+                        positional_metadata={'quality': np.array([1, 2, 3, 4], dtype=np.int64)},
                         interval_metadata=im)
         self.assertTrue(seq1 == seq2)
 
@@ -673,19 +672,21 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         s = "Sequence string !1@2#3?.,"
         length = len(s)
         seq = Sequence(s, metadata={'id': 'id', 'description': 'dsc'},
-                       positional_metadata={'quality': np.arange(length)})
+                       positional_metadata={'quality': np.arange(length,
+                                                                 dtype=np.int64)})
 
         eseq = Sequence("S", {'id': 'id', 'description': 'dsc'},
-                        positional_metadata={'quality': np.array([0])})
+                        positional_metadata={'quality': np.array([0], dtype=np.int64)})
         self.assertEqual(seq[0], eseq)
 
         eseq = Sequence(",", metadata={'id': 'id', 'description': 'dsc'},
                         positional_metadata={'quality':
-                                             np.array([len(seq) - 1])})
+                                             np.array([len(seq) - 1], dtype=np.int64)})
         self.assertEqual(seq[len(seq) - 1], eseq)
 
         eseq = Sequence("t", metadata={'id': 'id', 'description': 'dsc'},
-                        positional_metadata={'quality': [10]})
+                        positional_metadata={'quality': np.asarray([10],
+                                                                   dtype=np.int64)})
         self.assertEqual(seq[10], eseq)
 
     def test_single_index_to_slice(self):
@@ -710,9 +711,9 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
 
     def test_slice_positional_metadata(self):
         seq = Sequence('ABCDEFGHIJ',
-                       positional_metadata={'foo': np.arange(10),
-                                            'bar': np.arange(100, 110)})
-        self.assertTrue(pd.DataFrame({'foo': [0], 'bar': [100]}).equals(
+                       positional_metadata={'foo': np.arange(10, dtype=np.int64),
+                                            'bar': np.arange(100, 110, dtype=np.int64)})
+        self.assertTrue(pd.DataFrame({'foo': [0], 'bar': [100]}, dtype=np.int64).equals(
                         seq._slice_positional_metadata(0)))
         self.assertTrue(pd.DataFrame({'foo': [0], 'bar': [100]}).equals(
                         seq._slice_positional_metadata(slice(0, 1))))
@@ -734,36 +735,38 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         s = "0123456789abcdef"
         length = len(s)
         seq = Sequence(s, metadata={'id': 'id3', 'description': 'dsc3'},
-                       positional_metadata={'quality': np.arange(length)})
+                       positional_metadata={'quality': np.arange(length,
+                                                                 dtype=np.int64)})
 
         eseq = Sequence("012", metadata={'id': 'id3', 'description': 'dsc3'},
-                        positional_metadata={'quality': np.arange(3)})
+                        positional_metadata={'quality': np.arange(3, dtype=np.int64)})
         self.assertEqual(seq[0:3], eseq)
         self.assertEqual(seq[:3], eseq)
         self.assertEqual(seq[:3:1], eseq)
 
         eseq = Sequence("def", metadata={'id': 'id3', 'description': 'dsc3'},
-                        positional_metadata={'quality': [13, 14, 15]})
+                        positional_metadata={'quality': np.asarray([13, 14, 15],
+                                                                   dtype=np.int64)})
         self.assertEqual(seq[-3:], eseq)
         self.assertEqual(seq[-3::1], eseq)
 
         eseq = Sequence("02468ace",
                         metadata={'id': 'id3', 'description': 'dsc3'},
-                        positional_metadata={'quality': [0, 2, 4, 6, 8, 10,
-                                                         12, 14]})
+                        positional_metadata={'quality': np.asarray([0, 2, 4, 6, 8, 10,
+                                                         12, 14], dtype=np.int64)})
         self.assertEqual(seq[0:length:2], eseq)
         self.assertEqual(seq[::2], eseq)
 
         eseq = Sequence(s[::-1], metadata={'id': 'id3', 'description': 'dsc3'},
                         positional_metadata={'quality':
-                                             np.arange(length)[::-1]})
+                                             np.arange(length, dtype=np.int64)[::-1]})
         self.assertEqual(seq[length::-1], eseq)
         self.assertEqual(seq[::-1], eseq)
 
         eseq = Sequence('fdb97531',
                         metadata={'id': 'id3', 'description': 'dsc3'},
-                        positional_metadata={'quality': [15, 13, 11, 9, 7, 5,
-                                                         3, 1]})
+                        positional_metadata={'quality': np.asarray([15, 13, 11, 9, 7, 5,
+                                                         3, 1], dtype=np.int64)})
         self.assertEqual(seq[length::-2], eseq)
         self.assertEqual(seq[::-2], eseq)
 
@@ -777,7 +780,7 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         self.assertEqual(seq[1:0], eseq)
 
         eseq = Sequence("0", metadata={'id': 'id3', 'description': 'dsc3'},
-                        positional_metadata={'quality': [0]})
+                        positional_metadata={'quality': np.asarray([0], dtype=np.int64)})
         self.assertEqual(seq[0:1], eseq)
         self.assertEqual(seq[0:1:1], eseq)
         self.assertEqual(seq[-length::-1], eseq)
@@ -796,10 +799,12 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         s = "0123456789abcdef"
         length = len(s)
         seq = Sequence(s, metadata={'id': 'id5', 'description': 'dsc5'},
-                       positional_metadata={'quality': np.arange(length)})
+                       positional_metadata={'quality': np.arange(length,
+                                                                 dtype=np.int64)})
 
         eseq = Sequence("00000", metadata={'id': 'id5', 'description': 'dsc5'},
-                        positional_metadata={'quality': [0, 0, 0, 0, 0]})
+                        positional_metadata={'quality': np.asarray([0, 0, 0, 0, 0],
+                                                                   dtype=np.int64)})
         self.assertEqual(seq[0, 0, 0, 0, 0], eseq)
         self.assertEqual(seq[0, 0:1, 0, 0, 0], eseq)
         self.assertEqual(seq[0, 0:1, 0, -length::-1, 0, 1:0], eseq)
@@ -837,7 +842,8 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         s = "0123456789abcdef"
         length = len(s)
         seq = Sequence(s, metadata={'id': 'id7', 'description': 'dsc7'},
-                       positional_metadata={'quality': np.arange(length)})
+                       positional_metadata={'quality': np.arange(length,
+                                                                 dtype=np.int64)})
 
         def generator():
             yield slice(0, 4)
@@ -848,8 +854,8 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
 
         eseq = Sequence("0123fed9",
                         metadata={'id': 'id7', 'description': 'dsc7'},
-                        positional_metadata={'quality': [0, 1, 2, 3, 15, 14,
-                                                         13, 9]})
+                        positional_metadata={'quality': np.asarray([0, 1, 2, 3, 15, 14, 
+                                                                    13, 9], dtype=np.int64)})
         self.assertEqual(seq[[0, 1, 2, 3, 15, 14, 13, 9]], eseq)
         self.assertEqual(seq[generator()], eseq)
         self.assertEqual(seq[[slice(0, 4), slice(None, -4, -1), 9]], eseq)
@@ -878,12 +884,12 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         s = "0123456789abcdef"
         length = len(s)
         seq = Sequence(s, metadata={'id': 'id9', 'description': 'dsc9'},
-                       positional_metadata={'quality': np.arange(length)})
+                       positional_metadata={'quality': np.arange(length, dtype=np.int64)})
 
         eseq = Sequence("0123fed9",
                         metadata={'id': 'id9', 'description': 'dsc9'},
-                        positional_metadata={'quality': [0, 1, 2, 3, 15, 14,
-                                                         13, 9]})
+                        positional_metadata={'quality': np.asarray([0, 1, 2, 3, 15, 14,
+                                                         13, 9], dtype=np.int64)})
         self.assertEqual(seq[np.array([0, 1, 2, 3, 15, 14, 13, 9])], eseq)
 
     def test_getitem_with_numpy_index_no_positional_metadata(self):
@@ -922,12 +928,13 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         s = "0123456789abcdef"
         length = len(s)
         seq = Sequence(s, metadata={'id': 'id11', 'description': 'dsc11'},
-                       positional_metadata={'quality': np.arange(length)})
+                       positional_metadata={'quality': np.arange(length,
+                                                                 dtype=np.int64)})
 
         eseq = Sequence("13579bdf",
                         metadata={'id': 'id11', 'description': 'dsc11'},
-                        positional_metadata={'quality': [1, 3, 5, 7, 9, 11,
-                                                         13, 15]})
+                        positional_metadata={'quality': np.asarray([1, 3, 5, 7, 9, 11,
+                                                         13, 15], dtype=np.int64)})
 
         self.assertEqual(seq[np.array([False, True] * 8)], eseq)
         self.assertEqual(seq[[False, True] * 8], eseq)
@@ -1030,12 +1037,12 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
     def test_iter_has_positional_metadata(self):
         tested = False
         seq = Sequence("0123456789", metadata={'id': 'a', 'desc': 'b'},
-                       positional_metadata={'qual': np.arange(10)})
+                       positional_metadata={'qual': np.arange(10, dtype=np.int64)})
         for i, s in enumerate(seq):
             tested = True
             self.assertEqual(s, Sequence(str(i),
                                          metadata={'id': 'a', 'desc': 'b'},
-                                         positional_metadata={'qual': [i]}))
+                                         positional_metadata={'qual': np.asarray([i], dtype=np.int64)}))
         self.assertTrue(tested)
 
     def test_iter_no_positional_metadata(self):
@@ -1050,13 +1057,15 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
     def test_reversed_has_positional_metadata(self):
         tested = False
         seq = Sequence("0123456789", metadata={'id': 'a', 'desc': 'b'},
-                       positional_metadata={'qual': np.arange(10)})
+                       positional_metadata={'qual': np.arange(10, dtype=np.int64)})
         for i, s in enumerate(reversed(seq)):
             tested = True
-            self.assertEqual(s, Sequence(str(9 - i),
-                                         metadata={'id': 'a', 'desc': 'b'},
-                                         positional_metadata={'qual':
-                                                              [9 - i]}))
+            self.assertEqual(s,
+                             Sequence(str(9 - i),
+                                      metadata={'id': 'a', 'desc': 'b'},
+                                      positional_metadata={'qual':
+                                                            np.asarray([9 - i], 
+                                                            dtype=np.int64)}))
         self.assertTrue(tested)
 
     def test_reversed_no_positional_metadata(self):
@@ -1763,6 +1772,23 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
 
         self.assertIs(type(seq.iter_kmers(1)), GeneratorType)
 
+    def test_iter_kmers_large_k(self):
+        """Addressing issue 1723."""
+
+        # k larger than sequence length
+        seq = Sequence('TATATA')
+        expected = []
+        self._compare_kmers_results(seq.iter_kmers(10), expected)
+
+        # k equal to sequence length
+        expected = [Sequence('TATATA'), ]
+        self._compare_kmers_results(seq.iter_kmers(6), expected)
+
+        # with positional metadata
+        seq = Sequence('GATTACA', positional_metadata={'quality': range(7)})
+        expected = []
+        self._compare_kmers_results(seq.iter_kmers(10), expected)
+
     def test_iter_kmers_invalid_k(self):
         seq = Sequence('GATTACA', positional_metadata={'quality': range(7)})
 
@@ -1886,11 +1912,11 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         # want to test for exactly 1.0. A previous implementation of
         # Sequence.kmer_frequencies(relative=True) added (1 / num_words) for
         # each occurrence of a k-word to compute the frequencies (see
-        # https://github.com/biocore/scikit-bio/issues/801). In certain cases,
-        # this yielded a frequency slightly less than 1.0 due to roundoff
-        # error. The test case here uses a sequence with 10 characters that are
-        # all identical and computes k-word frequencies with k=1. This test
-        # case exposes the roundoff error present in the previous
+        # https://github.com/scikit-bio/scikit-bio/issues/801). In certain
+        # cases, this yielded a frequency slightly less than 1.0 due to
+        # roundoff error. The test case here uses a sequence with 10 characters
+        # that are all identical and computes k-word frequencies with k=1. This
+        # test case exposes the roundoff error present in the previous
         # implementation because there are 10 k-words (which are all
         # identical), so 1/10 added 10 times yields a number slightly less than
         # 1.0. This occurs because 1/10 cannot be represented exactly as a
@@ -2021,6 +2047,123 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
             exp = [Sequence("89ab")]
             obs = s.iter_contiguous(c(contiguous()), invert=True)
             self.assertEqual(list(obs), exp)
+
+    def test_to_indices_observed(self):
+        # arbitrary sequence
+        seq = Sequence('hello')
+        obs_idx, obs_alp = seq.to_indices()
+        exp_idx, exp_alp = np.array([1, 0, 2, 2, 3]), 'ehlo'
+        npt.assert_equal(obs_idx, exp_idx)
+        self.assertEqual(obs_alp, exp_alp)
+
+        # return ASCII code points
+        obs_idx, obs_alp = seq.to_indices(return_codes=True)
+        exp_alp = np.frombuffer('ehlo'.encode('ascii'), dtype=np.uint8)
+        npt.assert_equal(obs_idx, exp_idx)
+        npt.assert_equal(obs_alp, exp_alp)
+
+        # grammared sequence
+        obs_idx, obs_alp = DNA('GAGCTC').to_indices()
+        npt.assert_equal(obs_idx, np.array([2, 0, 2, 1, 3, 1]))
+        self.assertEqual(obs_alp, 'ACGT')
+
+    def test_to_indices_alphabet(self):
+        # arbitrary sequence
+        seq = Sequence('hello')
+        obs = seq.to_indices('oleh')
+        exp = np.array([3, 2, 1, 1, 0])
+        npt.assert_equal(obs, exp)
+
+        # grammared sequence
+        seq = DNA('GAGCTC')
+        obs = seq.to_indices('ACGT')
+        exp = np.array([2, 0, 2, 1, 3, 1])
+        npt.assert_equal(obs, exp)
+
+        # alphabet has duplicates
+        msg = 'Alphabet contains duplicated characters.'
+        with self.assertRaisesRegex(ValueError, msg):
+            Sequence('hello').to_indices('there')
+
+        # non-ASCII alphabet
+        msg = 'Alphabet cannot be encoded as single ASCII characters.'
+        with self.assertRaisesRegex(ValueError, msg):
+            Sequence('hello').to_indices('how are you'.split())
+
+    def test_to_indices_submat(self):
+        # basic nucleotides
+        sm = SubstitutionMatrix.identity('ACGT', 1, -2)
+        obs = DNA('GAGCTC').to_indices(sm)
+        exp = np.array([2, 0, 2, 1, 3, 1])
+        npt.assert_equal(obs, exp)
+
+        # extended nucleotides (and not sorted)
+        # ATGCSWRYKMBVHDN
+        sm = SubstitutionMatrix.by_name('NUC.4.4')
+        obs = DNA('GAGRCTC').to_indices(sm)
+        exp = np.array([2, 0, 2, 6, 3, 1, 3])
+        npt.assert_equal(obs, exp)
+
+        # non-ASCII alphabet
+        sm = SubstitutionMatrix.identity('how are you'.split(), 1, -2)
+        msg = ('Alphabet in the substitution matrix are not single ASCII '
+               'characters.')
+        with self.assertRaisesRegex(ValueError, msg):
+            Sequence('hello').to_indices(sm)
+
+    def test_to_indices_wildcard(self):
+        # default wildcard
+        seq = DNA('GAGRCTC')
+        obs = seq.to_indices('ACGTN')
+        exp = np.array([2, 0, 2, 4, 1, 3, 1])
+        npt.assert_equal(obs, exp)
+
+        # non-default wildcard
+        obs = seq.to_indices('ACGTN', wildcard='A')
+        exp = np.array([2, 0, 2, 0, 1, 3, 1])
+        npt.assert_equal(obs, exp)
+
+        # invalid wildcard
+        msg = 'Wildcard character "X" is not in the alphabet.'
+        with self.assertRaisesRegex(ValueError, msg):
+            seq.to_indices('ACGTN', wildcard='X')
+        msg = 'Wildcard must be a single ASCII character.'
+        with self.assertRaisesRegex(ValueError, msg):
+            seq.to_indices('ACGTN', wildcard='hi')
+        with self.assertRaisesRegex(ValueError, msg):
+            seq.to_indices('ACGTN', wildcard=chr(200))
+
+    def test_to_indices_masked(self):
+        # gaps are automatically identified and masked
+        obs_idx, obs_alp = DNA('GAG-CTC').to_indices()
+        self.assertTrue(isinstance(obs_idx, np.ma.MaskedArray))
+        npt.assert_equal(obs_idx.data, [2, 0, 2, 255, 1, 3, 1])
+        npt.assert_equal(obs_idx.mask, [0, 0, 0, 1, 0, 0, 0])
+        self.assertEqual(obs_alp, 'ACGT')
+
+        # force masking regardless of gap presence
+        obs_idx, obs_alp = DNA('GAGCTC').to_indices(mask_gaps=True)
+        self.assertTrue(isinstance(obs_idx, np.ma.MaskedArray))
+        npt.assert_equal(obs_idx.data, [2, 0, 2, 1, 3, 1])
+        npt.assert_equal(obs_idx.mask, [0, 0, 0, 0, 0, 0])
+        self.assertEqual(obs_alp, 'ACGT')
+
+        # force not masking regardless of gap presence
+        obs_idx, obs_alp = DNA('GAG-CTC').to_indices(mask_gaps=False)
+        self.assertFalse(isinstance(obs_idx, np.ma.MaskedArray))
+        npt.assert_equal(obs_idx, [3, 1, 3, 0, 2, 4, 2])
+        self.assertEqual(obs_alp, '-ACGT')
+
+        # gap character(s) are not defined
+        msg = r'Gap character\(s\) are not defined for the sequence.'
+        with self.assertRaisesRegex(ValueError, msg):
+            Sequence('hello').to_indices(mask_gaps=True)
+
+        # with alphabet
+        obs = DNA('GAG-CTC').to_indices('ACGT')
+        self.assertTrue(isinstance(obs, np.ma.MaskedArray))
+        npt.assert_equal(obs.data, [2, 0, 2, 255, 1, 3, 1])
+        npt.assert_equal(obs.mask, [0, 0, 0, 1, 0, 0, 0])
 
     def test_copy_without_metadata(self):
         # shallow vs deep copy with sequence only should be equivalent
@@ -2203,22 +2346,10 @@ class TestSequence(TestSequenceBase, ReallyEqualMixin):
         def mixed():
             return (slice(i, i+1) if i % 2 == 0 else i for i in range(10))
 
-        def unthinkable():
-            for i in range(10):
-                if i % 3 == 0:
-                    yield slice(i, i+1)
-                elif i % 3 == 1:
-                    yield i
-                else:
-                    yield np.array([i], dtype=int)
         for c in (lambda x: x, list, tuple, lambda x: np.array(tuple(x)),
                   lambda x: pd.Series(tuple(x))):
             exp = np.arange(10, dtype=int)
             obs = s._munge_to_index_array(c(mixed()))
-            npt.assert_equal(obs, exp)
-
-            exp = np.arange(10, dtype=int)
-            obs = s._munge_to_index_array(c(unthinkable()))
             npt.assert_equal(obs, exp)
 
             exp = np.arange(10, step=2, dtype=int)
@@ -2365,7 +2496,7 @@ class TestDistance(TestSequenceBase):
             DNA("ACGT").distance("WXYZ")
 
     def test_munging_invalid_type_to_self_type(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(TypeError):
             Sequence("ACGT").distance(42)
 
     def test_return_type_coercion(self):
@@ -2459,6 +2590,7 @@ class TestDistance(TestSequenceBase):
 
 # NOTE: this must be a *separate* class for doctests only (no unit tests). nose
 # will not run the unit tests otherwise
+# TODO: check if this is still the case since nose is no longer used
 #
 # these doctests exercise the correct formatting of Sequence's repr in a
 # variety of situations. they are more extensive than the unit tests above
