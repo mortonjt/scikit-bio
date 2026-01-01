@@ -806,7 +806,7 @@ class FastTreeNode(SkbioObject):
         >>> sorted(tree.subset())
         ['a', 'b']
         """
-        return frozenset({tip.name for tip in self.tips()})
+        return frozenset({tip.name for tip in self.tips(include_self=True)})
 
     @experimental(as_of="0.4.1")
     def distance(self, other):
