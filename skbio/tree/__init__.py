@@ -17,6 +17,7 @@ Classes
    :toctree: generated/
 
     TreeNode
+    FastTreeNode
 
 Phylogenetic Reconstruction
 ---------------------------
@@ -182,10 +183,12 @@ pairwise tip-to-tip distances between trees:
 # ----------------------------------------------------------------------------
 
 from ._tree import TreeNode
+from ._fast_tree import FastTreeNode
 from ._nj import nj
 from ._majority_rule import majority_rule
 from ._exception import (TreeError, NoLengthError, DuplicateNodeError,
                          MissingNodeError, NoParentError)
 
-__all__ = ['TreeNode', 'nj', 'majority_rule', 'TreeError', 'NoLengthError',
-           'DuplicateNodeError', 'MissingNodeError', 'NoParentError']
+__all__ = ['TreeNode', 'FastTreeNode', 'nj', 'majority_rule', 'TreeError',
+           'NoLengthError', 'DuplicateNodeError', 'MissingNodeError',
+           'NoParentError']
