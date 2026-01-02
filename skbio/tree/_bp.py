@@ -167,19 +167,37 @@ class BP:
         self._build_indices()
 
     def _build_indices(self):
-        """Build lookup indices for close operations."""
-        # Map from open position to close position
+        """Build lookup indices for O(1) operations."""
         n = self._size
+
+        # Map from open position to close position and vice versa
         self._close_idx = np.zeros(n, dtype=np.intp)
+        self._open_idx = np.zeros(n, dtype=np.intp)
+        # Map from open position to parent open position (-1 for root)
+        self._parent_idx = np.full(n, -1, dtype=np.intp)
 
         stack = []
         for i in range(n):
             if self._B[i]:  # Opening parenthesis
+                # Parent is the node currently on top of stack (if any)
+                if stack:
+                    self._parent_idx[i] = stack[-1]
                 stack.append(i)
             else:  # Closing parenthesis
                 if stack:
                     open_idx = stack.pop()
                     self._close_idx[open_idx] = i
+                    self._open_idx[i] = open_idx
+
+        # Build name lookup cache: name -> list of positions
+        self._name_to_positions = {}
+        for i in range(n):
+            if self._B[i]:  # Only opening positions have names
+                name = self._names[i]
+                if name is not None:
+                    if name not in self._name_to_positions:
+                        self._name_to_positions[name] = []
+                    self._name_to_positions[name].append(i)
 
     @property
     def B(self):
@@ -339,6 +357,38 @@ class BP:
             return i
         return self._close_idx[i]
 
+    def opening(self, i):
+        """Return the position of the opening parenthesis for close at i.
+
+        Parameters
+        ----------
+        i : int
+            The position of a closing parenthesis.
+
+        Returns
+        -------
+        int
+            The position of the matching opening parenthesis.
+        """
+        if self._B[i]:
+            return i
+        return self._open_idx[i]
+
+    def find_by_name(self, name):
+        """Return positions of nodes with the given name.
+
+        Parameters
+        ----------
+        name : str
+            The node name to search for.
+
+        Returns
+        -------
+        list of int
+            Positions of nodes with this name (empty if not found).
+        """
+        return self._name_to_positions.get(name, [])
+
     def _fwdsearch(self, i, d):
         """Forward search for excess at position i.
 
@@ -400,15 +450,8 @@ class BP:
         """
         if not self._B[i]:
             raise ValueError("Position must be an opening parenthesis")
-        if i == 0:
-            return -1  # Root has no enclosing node
-
-        # Find largest j < i where B[j] = 1 and excess[j] = excess[i] - 1
-        target_excess = self._excess[i] - 1
-        for j in range(i - 1, -1, -1):
-            if self._B[j] and self._excess[j] == target_excess:
-                return j
-        return -1
+        # Use O(1) parent lookup
+        return self._parent_idx[i]
 
     def parent(self, i):
         """Return the position of the parent of node at position i.
@@ -427,13 +470,12 @@ class BP:
             return -1  # Root has no parent
 
         if self._B[i]:
-            # Opening parenthesis - find enclosing
-            return self.enclose(i)
+            # Opening parenthesis - use O(1) parent lookup
+            return self._parent_idx[i]
         else:
             # Closing parenthesis - find parent of corresponding open
-            pass
-
-        return self.enclose(i)
+            open_pos = self._open_idx[i]
+            return self._parent_idx[open_pos]
 
     def isleaf(self, i):
         """Check if node at position i is a leaf.
@@ -604,8 +646,8 @@ class BP:
         close_pos = self.select(0, k)
         if close_pos == -1:
             return -1
-        # Find matching open
-        return self._bwdsearch(close_pos, 0)
+        # Find matching open using O(1) lookup
+        return self._open_idx[close_pos]
 
     def depth(self, i):
         """Return the depth of node at position i.
@@ -700,22 +742,24 @@ class BP:
         if i > j:
             i, j = j, i
 
-        # Find the minimum excess in the range [i, j]
-        close_i = self.close(i)
+        # Check if i is an ancestor of j
+        close_i = self._close_idx[i]
         if close_i >= j:
-            # i is an ancestor of j
             return i
 
-        # Find the enclosing node of the minimum
-        min_excess = np.min(self._excess[i + 1:j + 1])
-        # Find position of minimum
-        for k in range(i, j + 1):
-            if self._excess[k + 1] == min_excess:
-                min_pos = k
-                break
+        # Find position of minimum excess in range [i+1, j+1)
+        # Use numpy for efficiency
+        min_idx = np.argmin(self._excess[i + 1:j + 2]) + i + 1
+        min_pos = min_idx - 1  # Position in B array
 
-        # The LCA is the enclosing of the position just after the minimum
-        return self._bwdsearch(min_pos, -1)
+        # The LCA is the parent of the node at the minimum position
+        # If min_pos is an opening paren, use its parent
+        # If min_pos is a closing paren, use its matching open's parent
+        if self._B[min_pos]:
+            return self._parent_idx[min_pos]
+        else:
+            open_pos = self._open_idx[min_pos]
+            return self._parent_idx[open_pos]
 
     def levelancestor(self, i, d):
         """Return the ancestor of node i at depth d.
@@ -843,17 +887,8 @@ class BP:
                     new_names.append(self._names[i])
                     new_lengths.append(self._lengths[i])
             else:  # Closing
-                # Find corresponding open
-                # Count back to find the open position
-                excess = 0
-                for j in range(i, -1, -1):
-                    if self._B[j]:
-                        excess += 1
-                    else:
-                        excess -= 1
-                    if excess == 0:
-                        open_pos = j
-                        break
+                # Find corresponding open using O(1) lookup
+                open_pos = self._open_idx[i]
                 if open_pos in keep:
                     new_B.append(0)
                     new_names.append(None)
@@ -910,16 +945,8 @@ class BP:
                         parent = self.parent(parent)
                     new_lengths.append(length)
             else:  # Closing
-                # Find corresponding open
-                excess = 0
-                for j in range(i, -1, -1):
-                    if self._B[j]:
-                        excess += 1
-                    else:
-                        excess -= 1
-                    if excess == 0:
-                        open_pos = j
-                        break
+                # Find corresponding open using O(1) lookup
+                open_pos = self._open_idx[i]
                 if open_pos not in single_child:
                     new_B.append(0)
                     new_names.append(None)

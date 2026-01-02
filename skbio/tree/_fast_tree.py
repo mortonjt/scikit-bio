@@ -619,7 +619,8 @@ class FastTreeNode(SkbioObject):
                 if include_self or i != self._pos:
                     yield FastTreeNode(self._bp, i)
             else:  # Closing
-                open_pos = self._bp._bwdsearch(i, 0)
+                # Use O(1) lookup for matching open position
+                open_pos = self._bp._open_idx[i]
                 if not self._bp.isleaf(open_pos):
                     if include_self or open_pos != self._pos:
                         yield FastTreeNode(self._bp, open_pos)
@@ -653,10 +654,10 @@ class FastTreeNode(SkbioObject):
         if isinstance(name, FastTreeNode):
             return name
 
-        # Search through the tree
-        for node in self.root().preorder():
-            if node.name == name:
-                return node
+        # Use O(1) name lookup cache
+        positions = self._bp.find_by_name(name)
+        if positions:
+            return FastTreeNode(self._bp, positions[0])
 
         raise MissingNodeError(f"Node {name} is not in self")
 
@@ -689,15 +690,12 @@ class FastTreeNode(SkbioObject):
         if isinstance(name, FastTreeNode):
             return [name]
 
-        result = []
-        for node in self.root().preorder():
-            if node.name == name:
-                result.append(node)
-
-        if not result:
+        # Use O(1) name lookup cache
+        positions = self._bp.find_by_name(name)
+        if not positions:
             raise MissingNodeError(f"Node {name} is not in self")
 
-        return result
+        return [FastTreeNode(self._bp, pos) for pos in positions]
 
     def find_by_func(self, func):
         """Find all nodes matching a function.
