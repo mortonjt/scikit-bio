@@ -157,11 +157,12 @@ class BP:
             self._lengths = np.empty(self._size, dtype=np.float64)
             self._lengths.fill(np.nan)
 
-        # Build the RMM tree for efficient queries
-        self._rmm = _build_rmm_tree(self._B)
-
-        # Pre-compute excess array reference
-        self._excess = self._rmm['excess']
+        # Compute cumulative excess array using vectorized operations
+        # excess[i] = number of 1s minus number of 0s in B[0:i]
+        # Convert B to +1/-1: 1 -> +1, 0 -> -1
+        signs = 2 * self._B.astype(np.int32) - 1
+        self._excess = np.zeros(self._size + 1, dtype=np.int32)
+        self._excess[1:] = np.cumsum(signs)
 
         # Build lookup indices for efficient operations
         self._build_indices()

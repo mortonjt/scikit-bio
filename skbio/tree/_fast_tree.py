@@ -492,8 +492,8 @@ class FastTreeNode(SkbioObject):
         # Postorder: visit node when we see its closing parenthesis
         for i in range(self._pos, close + 1):
             if not self._bp.B[i]:  # Closing parenthesis
-                # Find corresponding open
-                open_pos = self._bp._bwdsearch(i, 0)
+                # Use O(1) lookup for corresponding open
+                open_pos = self._bp._open_idx[i]
                 if include_self or open_pos != self._pos:
                     yield FastTreeNode(self._bp, open_pos)
 
@@ -546,9 +546,13 @@ class FastTreeNode(SkbioObject):
         >>> [n.name for n in tree.tips()]
         ['a', 'b', 'd', 'e']
         """
-        for node in self.postorder(include_self=include_self):
-            if node.is_tip():
-                yield node
+        close = self._bp.close(self._pos)
+        B = self._bp.B
+        # A tip is where B[i]=1 (open) and B[i+1]=0 (close)
+        for i in range(self._pos, close):
+            if B[i] and not B[i + 1]:  # Opening followed by closing = tip
+                if include_self or i != self._pos:
+                    yield FastTreeNode(self._bp, i)
 
     def non_tips(self, include_self=False):
         """Iterate over non-tip nodes in postorder.
@@ -571,9 +575,17 @@ class FastTreeNode(SkbioObject):
         >>> [n.name for n in tree.non_tips()]
         ['c', 'f']
         """
-        for node in self.postorder(include_self=include_self):
-            if not node.is_tip():
-                yield node
+        close = self._bp.close(self._pos)
+        B = self._bp.B
+        # Internal node closes are where B[i]=0 and the matching open
+        # at _open_idx[i] is not followed by a close (i.e., not a leaf)
+        for i in range(self._pos, close + 1):
+            if not B[i]:  # Closing parenthesis
+                open_pos = self._bp._open_idx[i]
+                # Not a leaf: B[open_pos+1] == 1 (another open follows)
+                if B[open_pos + 1]:
+                    if include_self or open_pos != self._pos:
+                        yield FastTreeNode(self._bp, open_pos)
 
     def traverse(self, self_before=True, self_after=False, include_self=True):
         """Iterate over nodes depth-first.
@@ -896,17 +908,19 @@ class FastTreeNode(SkbioObject):
         >>> sorted([t.name for t in sheared.tips()])
         ['a', 'd']
         """
-        all_tips = {t.name for t in self.tips()}
         names_set = set(names)
 
-        if not names_set.issubset(all_tips):
-            raise ValueError("names are not a subset of the tree's tips")
-
-        # Find tip positions
+        # Find tip positions using name cache (O(1) per name)
         tip_positions = set()
-        for node in self.tips():
-            if node.name in names_set:
-                tip_positions.add(node._pos)
+        for name in names_set:
+            positions = self._bp.find_by_name(name)
+            if not positions:
+                raise ValueError(f"'{name}' is not a tip in the tree")
+            # Verify it's actually a tip
+            pos = positions[0]
+            if not self._bp.isleaf(pos):
+                raise ValueError(f"'{name}' is not a tip in the tree")
+            tip_positions.add(pos)
 
         # Create sheared tree
         new_bp = self._bp.shear(tip_positions)
